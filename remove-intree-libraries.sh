@@ -94,6 +94,9 @@ if [ ! -d ${PNG_SRC} ]; then
 fi	
 rm -rvf ${PNG_SRC}
 
+echo "Skipping removal of LCMS on rhel7. Internal will be used intentionally"
+exit 0
+
 echo "Removing lcms"
 if [ ! -d ${LCMS_SRC} ]; then
 	echo "${LCMS_SRC} does not exist. Refusing to proceed."
