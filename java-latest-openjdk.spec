@@ -946,7 +946,7 @@ Provides: java-src%1 = %{epoch}:%{version}-%{release}
 # Prevent brp-java-repack-jars from being run.
 %global __jar_repack 0
 
-Name:    java-%{origin}
+Name:    java-latest-%{origin}
 Version: %{newjavaver}.%{buildver}
 # This package needs `.rolling` as part of Release so as to not conflict on install with
 # java-X-openjdk. I.e. when latest rolling release is also an LTS release packaged as
