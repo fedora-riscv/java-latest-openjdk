@@ -1830,7 +1830,7 @@ require "copy_jdk_configs.lua"
 * Thu Apr 18 2019 Petra Mikova <pmikova@redhat.com> - 1:12.0.1.12-1.rolling
 - updated sources to current CPU release
 
-* Fri Apr 19 2019 Petra Mikova <pmikova@redhat.com> - 1:12.0.0.33-3.rolling
+* Fri Apr 5 2019 Petra Mikova <pmikova@redhat.com> - 1:12.0.0.33-3.rolling
 - added missing slave for jfr
 - removed duplicated dependency on lksctp-tools
 
