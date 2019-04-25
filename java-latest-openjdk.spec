@@ -120,10 +120,12 @@
 %endif
 
 %if %{bootstrap_build}
-%global targets bootcycle-images docs
+%global release_targets bootcycle-images docs-zip
 %else
-%global targets images docs
+%global release_targets images docs-zip
 %endif
+# No docs nor bootcycle for debug builds
+%global debug_targets images
 
 
 # Filter out flags from the optflags macro that cause problems with the OpenJDK build
@@ -1258,29 +1260,6 @@ Requires: javapackages-tools
 The %{origin_nice} %{majorver} API documentation compressed in single archive.
 %endif
 
-%if %{include_debug_build}
-%package javadoc-debug
-Summary: %{origin_nice} %{majorver} API documentation %{for_debug}
-Group:   Documentation
-Requires: javapackages-tools
-
-%{java_javadoc_rpo -- %{debug_suffix_unquoted}}
-
-%description javadoc-debug
-The %{origin_nice} %{majorver} API documentation %{for_debug}.
-%endif
-
-%if %{include_debug_build}
-%package javadoc-zip-debug
-Summary: %{origin_nice} %{majorver} API documentation compressed in single archive %{for_debug}
-Group:   Documentation
-Requires: javapackages-tools
-
-%{java_javadoc_rpo -- %{debug_suffix_unquoted}}
-
-%description javadoc-zip-debug
-The %{origin_nice} %{majorver} API documentation compressed in single archive %{for_debug}.
-%endif
 
 
 %prep
@@ -1442,16 +1421,18 @@ bash ../configure \
 %endif
     --disable-warnings-as-errors
 
-# use --no-print-directory as workaround for build failure
-# https://bugs.openjdk.java.net/browse/JDK-8215213
-make --no-print-directory \
+# Debug builds don't need same targets as release for
+# build speed-up
+maketargets="%{release_targets}"
+if echo $debugbuild | grep -q "debug" ; then
+  maketargets="%{debug_targets}"
+fi
+make \
     JAVAC_FLAGS=-g \
     LOG=trace \
     WARNINGS_ARE_ERRORS="-Wno-error" \
     CFLAGS_WARNINGS_ARE_ERRORS="-Wno-error" \
-    %{targets} || ( pwd; find $top_dir_abs_path -name "hs_err_pid*.log" | xargs cat && false )
-
-make docs-zip
+    $maketargets || ( pwd; find $top_dir_abs_path -name "hs_err_pid*.log" | xargs cat && false )
 
 # the build (erroneously) removes read permissions from some jars
 # this is a regression in OpenJDK 7 (our compiler):
@@ -1639,9 +1620,14 @@ popd
 
 
 # Install Javadoc documentation
-install -d -m 755 $RPM_BUILD_ROOT%{_javadocdir}
-cp -a %{buildoutputdir $suffix}/images/docs $RPM_BUILD_ROOT%{_javadocdir}/%{uniquejavadocdir $suffix}
-cp -a %{buildoutputdir $suffix}/bundles/jdk-%{majorver}%{ea_designator_zip}+%{buildver}%{lts_designator_zip}-docs.zip  $RPM_BUILD_ROOT%{_javadocdir}/%{uniquejavadocdir $suffix}.zip
+
+if ! echo $suffix | grep -q "debug" ; then
+  # Install Javadoc documentation
+  install -d -m 755 $RPM_BUILD_ROOT%{_javadocdir}
+  cp -a %{buildoutputdir $suffix}/images/docs $RPM_BUILD_ROOT%{_javadocdir}/%{uniquejavadocdir $suffix}
+  cp -a %{buildoutputdir $suffix}/bundles/jdk-%{majorver}%{ea_designator_zip}+%{buildver}%{lts_designator_zip}-docs.zip  $RPM_BUILD_ROOT%{_javadocdir}/%{uniquejavadocdir $suffix}.zip
+fi
+
 
 # Install icons and menu entries
 for s in 16 24 32 48 ; do
@@ -1777,17 +1763,6 @@ require "copy_jdk_configs.lua"
 %posttrans  devel-debug
 %{posttrans_devel -- %{debug_suffix_unquoted}}
 
-%post javadoc-debug
-%{post_javadoc -- %{debug_suffix_unquoted}}
-
-%postun javadoc-debug
-%{postun_javadoc -- %{debug_suffix_unquoted}}
-
-%post javadoc-zip-debug
-%{post_javadoc_zip -- %{debug_suffix_unquoted}}
-
-%postun javadoc-zip-debug
-%{postun_javadoc_zip -- %{debug_suffix_unquoted}}
 %endif
 
 %if %{include_normal_build}
@@ -1847,16 +1822,15 @@ require "copy_jdk_configs.lua"
 
 %files src-debug
 %{files_src -- %{debug_suffix_unquoted}}
-
-%files javadoc-debug
-%{files_javadoc -- %{debug_suffix_unquoted}}
-
-%files javadoc-zip-debug
-%{files_javadoc_zip -- %{debug_suffix_unquoted}}
 %endif
 
 
 %changelog
+* Tue Oct 01 2019 Severin Gehwolf <sgehwolf@redhat.com> - 1:13.0.0.33-2.rolling
+- Don't produce javadoc/javadoc-zip sub packages for the
+  debug variant build.
+- Don't perform a bootcycle build for the debug variant build.
+
 * Mon Sep 30 2019 Severin Gehwolf <sgehwolf@redhat.com> - 1:13.0.0.33-2.rolling
 - Fix vendor version as JDK 13 has been GA'ed September 2019: 19.3 => 19.9
 - bumped buildjdk version to 13
