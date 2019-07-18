@@ -206,7 +206,7 @@
 
 # New Version-String scheme-style defines
 %global majorver 12
-%global securityver 1
+%global securityver 2
 # buildjdkver is usually same as %%{majorver},
 # but in time of bootstrap of next jdk, it is majorver-1, 
 # and this it is better to change it here, on single place
@@ -224,7 +224,7 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{origin}
 %global minorver        0
-%global buildver        12
+%global buildver        9
 # priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 %global priority %( printf '%02d%02d%02d%02d' %{majorver} %{minorver} %{securityver} %{buildver} )
@@ -950,7 +950,7 @@ Version: %{newjavaver}.%{buildver}
 # This package needs `.rolling` as part of Release so as to not conflict on install with
 # java-X-openjdk. I.e. when latest rolling release is also an LTS release packaged as
 # java-X-openjdk. See: https://bugzilla.redhat.com/show_bug.cgi?id=1647298
-Release: 2.rolling%{?dist}
+Release: 1.rolling%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons
 # and this change was brought into RHEL-4. java-1.5.0-ibm packages
 # also included the epoch in their virtual provides. This created a
@@ -1824,6 +1824,9 @@ require "copy_jdk_configs.lua"
 
 
 %changelog
+* Thu Jul 18 2019 Severin Gehwolf <sgehwolf@redhat.com> - 1:12.0.2.9-1.rolling
+- Update to July 2019 CPU update (tag jdk-12.0.2+9)
+
 * Tue May 21 2019 Petra Alice Mikova <pmikova@redhat.com> - 1:12.0.1.12-2.rolling
 - fixed requires/provides for the non-system JDK case (backport of RHBZ#1702324)
 
