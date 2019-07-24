@@ -226,7 +226,7 @@
 %global top_level_dir_name   %{origin}
 %global minorver        0
 %global buildver        33
-%global rpmrelease      2
+%global rpmrelease      3
 # priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 %global priority %( printf '%02d%02d%02d%02d' %{majorver} %{minorver} %{securityver} %{buildver} )
@@ -1241,6 +1241,7 @@ The java-%{origin}-src-slowdebug sub-package contains the complete %{origin_nice
 Summary: %{origin_nice} %{majorver} API documentation
 Group:   Documentation
 Requires: javapackages-tools
+Obsoletes: javadoc-slowdebug < 1:13.0.0.33-1.rolling
 
 %{java_javadoc_rpo %{nil}}
 
@@ -1250,14 +1251,15 @@ The %{origin_nice} %{majorver} API documentation.
 
 %if %{include_normal_build}
 %package javadoc-zip
-Summary: %{origin_nice} %{majorver} API documentation compressed in single archive
+Summary: %{origin_nice} %{majorver} API documentation compressed in a single archive
 Group:   Documentation
 Requires: javapackages-tools
+Obsoletes: javadoc-zip-slowdebug < 1:13.0.0.33-1.rolling
 
 %{java_javadoc_rpo %{nil}}
 
 %description javadoc-zip
-The %{origin_nice} %{majorver} API documentation compressed in single archive.
+The %{origin_nice} %{majorver} API documentation compressed in a single archive.
 %endif
 
 
@@ -1826,6 +1828,9 @@ require "copy_jdk_configs.lua"
 
 
 %changelog
+* Wed Oct 02 2019 Andrew Hughes <gnu.andrew@redhat.com> - 1:13.0.0.33-3.rolling
+- Obsolete javadoc-slowdebug and javadoc-slowdebug-zip packages via javadoc and javadoc-zip respectively.
+
 * Tue Oct 01 2019 Severin Gehwolf <sgehwolf@redhat.com> - 1:13.0.0.33-2.rolling
 - Don't produce javadoc/javadoc-zip sub packages for the
   debug variant build.
