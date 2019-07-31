@@ -226,7 +226,7 @@
 %global top_level_dir_name   %{origin}
 %global minorver        0
 %global buildver        33
-%global rpmrelease      3
+%global rpmrelease      4
 # priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 %global priority %( printf '%02d%02d%02d%02d' %{majorver} %{minorver} %{securityver} %{buildver} )
@@ -1065,13 +1065,11 @@ BuildRequires: cups-devel
 BuildRequires: desktop-file-utils
 # elfutils only are OK for build without AOT
 BuildRequires: elfutils-devel
-BuildRequires: fontconfig
+BuildRequires: fontconfig-devel
 BuildRequires: freetype-devel
 BuildRequires: giflib-devel
 BuildRequires: gcc-c++
 BuildRequires: gdb
-BuildRequires: gtk2-devel
-# LCMS on rhel7 is older then LCMS in intree JDK
 BuildRequires: lcms2-devel
 BuildRequires: libjpeg-devel
 BuildRequires: libpng-devel
@@ -1079,6 +1077,8 @@ BuildRequires: libxslt
 BuildRequires: libX11-devel
 BuildRequires: libXi-devel
 BuildRequires: libXinerama-devel
+BuildRequires: libXrandr-devel
+BuildRequires: libXrender-devel
 BuildRequires: libXt-devel
 BuildRequires: libXtst-devel
 # Requirements for setting up the nss.cfg
@@ -1828,6 +1828,12 @@ require "copy_jdk_configs.lua"
 
 
 %changelog
+* Wed Oct 02 2019 Andrew John Hughes <gnu.andrew@redhat.com> -  1:13.0.0.33-4.rolling
+- Drop unnecessary build requirement on gtk3-devel, as OpenJDK searches for Gtk+ at runtime.
+- Add missing build requirement for libXrender-devel, previously masked by Gtk3+ dependency
+- Add missing build requirement for libXrandr-devel, previously masked by Gtk3+ dependency
+- fontconfig build requirement should be fontconfig-devel, previously masked by Gtk3+ dependency
+
 * Wed Oct 02 2019 Andrew Hughes <gnu.andrew@redhat.com> - 1:13.0.0.33-3.rolling
 - Obsolete javadoc-slowdebug and javadoc-slowdebug-zip packages via javadoc and javadoc-zip respectively.
 
