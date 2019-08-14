@@ -223,7 +223,7 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{origin}
 %global minorver        0
-%global buildver        28
+%global buildver        33
 %global rpmrelease      1
 # priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
@@ -240,7 +240,7 @@
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
 # - N%%{?extraver}{?dist} for GA releases
-%global is_ga           0
+%global is_ga           1
 %if %{is_ga}
 %global ea_designator ""
 %global ea_designator_zip ""
@@ -744,6 +744,10 @@ exit 0
 %{_mandir}/man1/jlink-%{uniquesuffix %%1}.1*
 %{_mandir}/man1/jmod-%{uniquesuffix %%1}.1*
 %{_mandir}/man1/jshell-%{uniquesuffix %%1}.1*
+%{_mandir}/man1/jfr-%{uniquesuffix %%1}.1*
+%ifarch %{aot_arches}
+%{_mandir}/man1/jaotc-%{uniquesuffix %%1}.1*
+%endif
 
 %if %{with_systemtap}
 %dir %{tapsetroot}
@@ -1853,6 +1857,11 @@ require "copy_jdk_configs.lua"
 
 
 %changelog
+* Wed Aug 14 2019 Petra Alice Mikova <pmikova@redhat.com> - 1:13.0.0.33-1.rolling
+- updated to 13+33 sources
+- added two manpages to file listings (jfr, jaotc)
+- set is_ga to 1 to match build from jdk.java.net
+
 * Fri Jul 19 2019 Petra Alice Mikova <pmikova@redhat.com> - 1:13.0.0.28-0.1.ea.rolling
 - updated to jdk 13
 - adapted pr2126-synchronise_elliptic_curves_in_sun_security_ec_namedcurve_with_those_listed_by_nss.patch
