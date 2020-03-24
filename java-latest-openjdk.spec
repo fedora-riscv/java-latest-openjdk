@@ -1035,6 +1035,14 @@ Patch4:    pr3183-rh1340845-support_fedora_rhel_system_crypto_policy.patch
 # Depend on pcs-lite-libs instead of pcs-lite-devel as this is only in optional repo
 Patch6: rh1684077-openjdk_should_depend_on_pcsc-lite-libs_instead_of_pcsc-lite-devel.patch
 
+	
+#############################################	
+#
+# OpenJDK specific patches	
+#	
+#############################################
+
+
 BuildRequires: autoconf
 BuildRequires: automake
 BuildRequires: alsa-lib-devel
