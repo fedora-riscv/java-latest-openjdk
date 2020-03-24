@@ -218,7 +218,7 @@
 %global top_level_dir_name   %{origin}
 %global minorver        0
 %global buildver        36
-%global rpmrelease      1
+%global rpmrelease      2
 # priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 %global priority %( printf '%02d%02d%02d%02d' %{majorver} %{minorver} %{securityver} %{buildver} )
@@ -339,7 +339,7 @@ alternatives \\
   --slave %{_mandir}/man1/rmid.1$ext rmid.1$ext \\
   %{_mandir}/man1/rmid-%{uniquesuffix %%1}.1$ext \\
   --slave %{_mandir}/man1/rmiregistry.1$ext rmiregistry.1$ext \\
-  %{_mandir}/man1/rmiregistry-%{uniquesuffix %%1}.1$ext \\
+  %{_mandir}/man1/rmiregistry-%{uniquesuffix %%1}.1$ext 
 
 for X in %{origin} %{javaver} ; do
   alternatives --install %{_jvmdir}/jre-"$X" jre_"$X" %{_jvmdir}/%{sdkdir %%1} $PRIORITY --family %{name}.%{_arch}
@@ -463,7 +463,7 @@ alternatives \\
   --slave %{_mandir}/man1/rmic.1$ext rmic.1$ext \\
   %{_mandir}/man1/rmic-%{uniquesuffix %%1}.1$ext \\
   --slave %{_mandir}/man1/serialver.1$ext serialver.1$ext \\
-  %{_mandir}/man1/serialver-%{uniquesuffix %%1}.1$ext \\
+  %{_mandir}/man1/serialver-%{uniquesuffix %%1}.1$ext 
 
 for X in %{origin} %{javaver} ; do
   alternatives \\
@@ -1805,6 +1805,9 @@ require "copy_jdk_configs.lua"
 
 
 %changelog
+* Mon Mar 23 2020 Petra Alice Mikova <pmikova@redhat.com> - 1:14.0.0.36-2.rolling
+- removed backslashes at the end of alternatives command
+
 * Fri Mar 13 2020 Petra Alice Mikova <pmikova@redhat.com> - 1:14.0.0.36-1.rolling
 - update to jdk 14+36 ga build
 - removed pack200 and unpack200 binaries, slaves, manpages and libunpack.so library
