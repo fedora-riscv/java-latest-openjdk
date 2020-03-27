@@ -204,7 +204,7 @@
 # buildjdkver is usually same as %%{majorver},
 # but in time of bootstrap of next jdk, it is majorver-1, 
 # and this it is better to change it here, on single place
-%global buildjdkver 13
+%global buildjdkver 14
 # Used via new version scheme. JDK 14 was
 # GA'ed in March 2020 => 20.3
 %global vendor_version_string 20.3
@@ -1839,6 +1839,7 @@ require "copy_jdk_configs.lua"
 %changelog
 * Thu Apr 23 2020 Severin Gehwolf <sgehwolf@redhat.com> - 1:14.0.1.7-2.rolling
 - Fix vendor version to 20.3 (from 19.9)
+- bump buildjdkver to 14
 
 * Fri Apr 17 2020 Petra Alice Mikova <pmikova@redhat.com> - 1:14.0.1.7-1.rolling
 - April security update
