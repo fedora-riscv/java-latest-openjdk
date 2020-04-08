@@ -1811,6 +1811,7 @@ require "copy_jdk_configs.lua"
 %changelog
 * Tue Mar 24 2020 Petra Alice Mikova <pmikova@redhat.com> - 1:14.0.0.36-3.rolling
 - Remove s390x workaround flags for GCC 10
+- uploaded new src tarball 
 
 * Mon Mar 23 2020 Petra Alice Mikova <pmikova@redhat.com> - 1:14.0.0.36-2.rolling
 - removed a whitespace causing fail of postinstall script
