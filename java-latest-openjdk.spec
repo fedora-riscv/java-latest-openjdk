@@ -218,7 +218,7 @@
 %global top_level_dir_name   %{origin}
 %global minorver        0
 %global buildver        36
-%global rpmrelease      2
+%global rpmrelease      3
 # priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 %global priority %( printf '%02d%02d%02d%02d' %{majorver} %{minorver} %{securityver} %{buildver} )
@@ -1805,6 +1805,9 @@ require "copy_jdk_configs.lua"
 
 
 %changelog
+* Tue Mar 24 2020 Petra Alice Mikova <pmikova@redhat.com> - 1:14.0.0.36-3.rolling
+- uploaded new src tarball 
+
 * Mon Mar 23 2020 Petra Alice Mikova <pmikova@redhat.com> - 1:14.0.0.36-2.rolling
 - removed backslashes at the end of alternatives command
 
