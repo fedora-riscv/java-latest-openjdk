@@ -1059,6 +1059,12 @@ Patch6: rh1684077-openjdk_should_depend_on_pcsc-lite-libs_instead_of_pcsc-lite-d
 #	
 #############################################
 
+#############################################
+#
+# OpenJDK upstreamable patches
+#
+#############################################
+Patch8: jdk8243059-build_fails_when_with_vendor_contains_comma.patch
 
 BuildRequires: autoconf
 BuildRequires: automake
@@ -1285,6 +1291,7 @@ pushd %{top_level_dir_name}
 %patch3 -p1
 %patch4 -p1
 %patch6 -p1
+%patch8 -p1
 popd # openjdk
 
 %patch1000
@@ -1387,7 +1394,7 @@ bash ../configure \
     --with-version-pre="%{ea_designator}"\
     --with-version-opt=%{lts_designator} \
     --with-vendor-version-string="%{vendor_version_string}" \
-    --with-vendor-name="Red Hat, Inc" \
+    --with-vendor-name="Red Hat, Inc." \
     --with-vendor-url="https://www.redhat.com/" \
     --with-vendor-bug-url="%{bugs}" \
     --with-vendor-vm-bug-url="%{bugs}" \
