@@ -204,7 +204,7 @@
 # buildjdkver is usually same as %%{majorver},
 # but in time of bootstrap of next jdk, it is majorver-1, 
 # and this it is better to change it here, on single place
-%global buildjdkver 13
+%global buildjdkver 14
 # Used via new version scheme. JDK 13 was
 # GA'ed in September 2019 => 19.9
 %global vendor_version_string 19.9
@@ -1060,6 +1060,13 @@ Patch6: rh1684077-openjdk_should_depend_on_pcsc-lite-libs_instead_of_pcsc-lite-d
 #############################################
 
 
+#############################################
+#
+# OpenJDK upstreamable patches
+#
+#############################################
+Patch8: jdk8243059-build_fails_when_with_vendor_contains_comma.patch
+
 BuildRequires: autoconf
 BuildRequires: automake
 BuildRequires: alsa-lib-devel
@@ -1285,6 +1292,7 @@ pushd %{top_level_dir_name}
 %patch3 -p1
 %patch4 -p1
 %patch6 -p1
+%patch8 -p1
 popd # openjdk
 
 %patch1000
@@ -1387,7 +1395,7 @@ bash ../configure \
     --with-version-pre="%{ea_designator}"\
     --with-version-opt=%{lts_designator} \
     --with-vendor-version-string="%{vendor_version_string}" \
-    --with-vendor-name="Red Hat, Inc" \
+    --with-vendor-name="Red Hat, Inc." \
     --with-vendor-url="https://www.redhat.com/" \
     --with-vendor-bug-url="%{bugs}" \
     --with-vendor-vm-bug-url="%{bugs}" \
@@ -1830,6 +1838,7 @@ require "copy_jdk_configs.lua"
 - made urls to be preconfigured by os
 
 * Tue Mar 24 2020 Petra Alice Mikova <pmikova@redhat.com> - 1:14.0.0.36-3.rolling
+- bump buildjdkver to 14
 - uploaded new src tarball 
 
 * Mon Mar 23 2020 Petra Alice Mikova <pmikova@redhat.com> - 1:14.0.0.36-2.rolling
