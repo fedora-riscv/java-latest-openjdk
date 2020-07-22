@@ -204,7 +204,7 @@
 # Used via new version scheme. JDK 14 was
 # GA'ed in March 2020 => 20.3
 %global vendor_version_string 20.3
-%global securityver 1
+%global securityver 2
 # buildjdkver is usually same as %%{majorver},
 # but in time of bootstrap of next jdk, it is majorver-1, 
 # and this it is better to change it here, on single place
@@ -219,8 +219,8 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{origin}
 %global minorver        0
-%global buildver        7
-%global rpmrelease      4
+%global buildver        12
+%global rpmrelease      1
 # priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 %global priority %( printf '%02d%02d%02d%02d' %{majorver} %{minorver} %{securityver} %{buildver} )
@@ -1056,18 +1056,12 @@ Patch4:    pr3183-rh1340845-support_fedora_rhel_system_crypto_policy.patch
 Patch6: rh1684077-openjdk_should_depend_on_pcsc-lite-libs_instead_of_pcsc-lite-devel.patch
 
 	
-#############################################	
-#
-# OpenJDK specific patches	
-#	
-#############################################
 
 #############################################
 #
-# OpenJDK upstreamable patches
+# OpenJDK patches in need of upstreaming
 #
 #############################################
-Patch8: jdk8243059-build_fails_when_with_vendor_contains_comma.patch
 
 BuildRequires: autoconf
 BuildRequires: automake
@@ -1294,7 +1288,6 @@ pushd %{top_level_dir_name}
 %patch3 -p1
 %patch4 -p1
 %patch6 -p1
-%patch8 -p1
 popd # openjdk
 
 %patch1000
@@ -1840,6 +1833,10 @@ require "copy_jdk_configs.lua"
 
 
 %changelog
+* Wed Jul 22 2020 Petra Alice Mikova <pmikova@redhat.com> - 1:14.0.2.12-1.rolling
+- update to jdk 14.0.2.12 CPU version
+- remove upstreamed patch jdk8243059-build_fails_when_with_vendor_contains_comma.patch
+
 * Thu Jul 09 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:14.0.1.7-4.rolling
 - Re-introduce java-openjdk-src & java-openjdk-demo for system_jdk builds.
 - Fix accidental renaming of java-openjdk-devel to java-devel-openjdk.
