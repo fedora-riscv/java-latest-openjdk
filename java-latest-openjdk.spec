@@ -236,7 +236,7 @@
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
 # - N%%{?extraver}{?dist} for GA releases
-%global is_ga           0
+%global is_ga           1
 %if %{is_ga}
 %global ea_designator ""
 %global ea_designator_zip ""
@@ -1814,6 +1814,10 @@ require "copy_jdk_configs.lua"
 
 
 %changelog
+* Tue Sep 15 2020 Severin Gehwolf <sgehwolf@redhat.com> - 1:15.0.0.36-1.rolling
+- Remove EA designation
+- Re-generate sources with PR3803 patch
+
 * Mon Aug 31 2020 Petra Alice Mikova <pmikova@redhat.com> - 1:15.0.0.36-0.1.ea.rolling
 - Update to jdk 15.0.0.36 tag
 - Modify rh1648249-add_commented_out_nss_cfg_provider_to_java_security.patch
