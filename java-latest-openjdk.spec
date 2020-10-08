@@ -1064,7 +1064,8 @@ BuildRequires: elfutils-devel
 BuildRequires: fontconfig-devel
 BuildRequires: freetype-devel
 BuildRequires: giflib-devel
-BuildRequires: gcc-c++
+BuildRequires: devtoolset-8-gcc
+BuildRequires: devtoolset-8-gcc-c++
 BuildRequires: gdb
 BuildRequires: lcms2-devel
 BuildRequires: libjpeg-devel
@@ -1089,8 +1090,6 @@ BuildRequires: java-latest-openjdk-devel
 BuildRequires: libffi-devel
 %endif
 BuildRequires: tzdata-java >= 2015d
-# Earlier versions have a bug in tree vectorization on PPC
-BuildRequires: gcc >= 4.8.3-8
 
 %if %{with_systemtap}
 BuildRequires: systemtap-sdt-devel
@@ -1384,7 +1383,7 @@ top_dir_abs_path=$(pwd)/%{top_level_dir_name}
 mkdir -p %{buildoutputdir $suffix}
 pushd %{buildoutputdir $suffix}
 
-bash ../configure \
+scl enable devtoolset-8 "bash ../configure \
 %ifnarch %{jit_arches}
     --with-jvm-variants=zero \
 %endif
@@ -1392,13 +1391,13 @@ bash ../configure \
     --with-jobs=1 \
 %endif
     --with-version-build=%{buildver} \
-    --with-version-pre="%{ea_designator}"\
+    --with-version-pre=\"%{ea_designator}\"\
     --with-version-opt=%{lts_designator} \
-    --with-vendor-version-string="%{vendor_version_string}" \
-    --with-vendor-name="Red Hat, Inc." \
-    --with-vendor-url="https://www.redhat.com/" \
-    --with-vendor-bug-url="%{bugs}" \
-    --with-vendor-vm-bug-url="%{bugs}" \
+    --with-vendor-version-string=\"%{vendor_version_string}\" \
+    --with-vendor-name=\"Red Hat, Inc.\" \
+    --with-vendor-url=\"https://www.redhat.com/\" \
+    --with-vendor-bug-url=\"%{bugs}\" \
+    --with-vendor-vm-bug-url=\"%{bugs}\" \
     --with-boot-jdk=/usr/lib/jvm/java-%{buildjdkver}-openjdk \
     --with-debug-level=$debugbuild \
     --with-native-debug-symbols=internal \
@@ -1409,15 +1408,15 @@ bash ../configure \
     --with-libpng=system \
     --with-lcms=bundled \
     --with-stdc++lib=dynamic \
-    --with-extra-cxxflags="$EXTRA_CPP_FLAGS" \
-    --with-extra-cflags="$EXTRA_CFLAGS" \
-    --with-extra-ldflags="%{ourldflags}" \
-    --with-num-cores="$NUM_PROC" \
+    --with-extra-cxxflags=\"$EXTRA_CPP_FLAGS\" \
+    --with-extra-cflags=\"$EXTRA_CFLAGS\" \
+    --with-extra-ldflags=\"%{ourldflags}\" \
+    --with-num-cores=\"$NUM_PROC\" \
     --disable-javac-server \
 %ifarch x86_64
     --with-jvm-features=zgc \
 %endif
-    --disable-warnings-as-errors
+    --disable-warnings-as-errors"
 
 # Debug builds don't need same targets as release for
 # build speed-up
@@ -1425,12 +1424,12 @@ maketargets="%{release_targets}"
 if echo $debugbuild | grep -q "debug" ; then
   maketargets="%{debug_targets}"
 fi
-make \
+scl enable devtoolset-8 "make \
     JAVAC_FLAGS=-g \
     LOG=trace \
-    WARNINGS_ARE_ERRORS="-Wno-error" \
-    CFLAGS_WARNINGS_ARE_ERRORS="-Wno-error" \
-    $maketargets || ( pwd; find $top_dir_abs_path -name "hs_err_pid*.log" | xargs cat && false )
+    WARNINGS_ARE_ERRORS=\"-Wno-error\" \
+    CFLAGS_WARNINGS_ARE_ERRORS=\"-Wno-error\" \
+    $maketargets || ( pwd; find $top_dir_abs_path -name \"hs_err_pid*.log\" | xargs cat && false )"
 
 # the build (erroneously) removes read permissions from some jars
 # this is a regression in OpenJDK 7 (our compiler):
@@ -1830,6 +1829,7 @@ require "copy_jdk_configs.lua"
 - Update vendor version string to 20.9
 - jjs removed from packaging after JEP 372: Nashorn removal
 - rmic removed from packaging after JDK-8225319
+- moved to build by devtoolset-8 scl, as gcc in epel7 is to old: https://bugs.openjdk.java.net/browse/JDK-8249140
 
 * Wed Jul 22 2020 Petra Alice Mikova <pmikova@redhat.com> - 1:14.0.2.12-1.rolling
 - update to jdk 14.0.2.12 CPU version
