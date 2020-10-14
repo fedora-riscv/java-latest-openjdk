@@ -115,6 +115,8 @@
 %else
 %global include_fastdebug_build 0
 %endif
+%else
+%global include_fastdebug_build 0
 %endif
 
 %if %{include_debug_build}
