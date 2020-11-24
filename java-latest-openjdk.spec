@@ -229,7 +229,7 @@
 # buildjdkver is usually same as %%{majorver},
 # but in time of bootstrap of next jdk, it is majorver-1, 
 # and this it is better to change it here, on single place
-%global buildjdkver 14
+%global buildjdkver 15
 # We don't add any LTS designator for STS packages (this package).
 # Neither for Fedora nor EPEL which would have %%{rhel} macro defined.
  %global lts_designator ""
