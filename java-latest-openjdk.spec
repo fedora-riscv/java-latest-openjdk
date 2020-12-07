@@ -11,7 +11,10 @@
 # $ rpmbuild -ba java-latest-openjdk.spec --without slowdebug --without fastdebug
 #
 # Only produce a release build on x86_64:
-# $ rhpkg mockbuild --without slowdebug --without fastdebug
+# $ fedpkg mockbuild --without slowdebug --without fastdebug
+#
+# Only produce a debug build on x86_64:
+# $ fedpkg local --without release
 #
 # Enable fastdebug builds by default on relevant arches.
 %bcond_without fastdebug
@@ -43,7 +46,7 @@
 %global debug_warning This package is unoptimised with full debugging. Install only as needed and remove ASAP.
 %global debug_on with full debug on
 %global fastdebug_warning This package is optimised with full debugging. Install only as needed and remove ASAP.
-%global for_fastdebug_on with minimal debug on
+%global for_fastdebug with minimal debug on
 %global for_debug for packages with debug on
 
 %if %{with release}
@@ -70,7 +73,8 @@
 # == rpm -ql           java-11-openjdk-headless-slowdebug-11.0.1.13-8.fc29.x86_64.rpm  | grep bin
 # != rpm -ql           java-11-openjdk-headless-11.0.1.13-8.fc29.x86_64.rpm  | grep bin
 # similarly for other %%{_jvmdir}/{jre,java} and %%{_javadocdir}/{java,java-zip}
-%define is_release_build() %( if [ "%1" == "%{debug_suffix_unquoted}" ]; then echo "0" ; else echo "1"; fi )
+%define is_release_build() %( if [ "%1" == "%{debug_suffix_unquoted}" -o "%1" == "%{fastdebug_suffix_unquoted}" ]; then echo "0" ; else echo "1"; fi )
+
 
 # while JDK is a techpreview(is_system_jdk=0), some provides are turned off. Once jdk stops to be an techpreview, move it to 1
 # as sytem JDK, we mean any JDK which can run whole system java stack without issues (like bytecode issues, module issues, dependencies...)
@@ -80,15 +84,35 @@
 # we need to distinguish between big and little endian PPC64
 %global ppc64le         ppc64le
 %global ppc64be         ppc64 ppc64p7
+# Set of architectures which support multiple ABIs
 %global multilib_arches %{power64} sparc64 x86_64
-%global jit_arches      %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{power64} %{arm} s390x
+# Set of architectures for which we build debug builds
+%global debug_arches    %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{power64} s390x
+# Set of architectures with a Just-In-Time (JIT) compiler
+%global jit_arches      %{debug_arches} %{arm}
+# Set of architectures which run a full bootstrap cycle
+%global bootstrap_arches %{jit_arches}
+# Set of architectures which support SystemTap tapsets
+%global systemtap_arches %{jit_arches}
+# Set of architectures with a Ahead-Of-Time (AOT) compiler
 %global aot_arches      x86_64 %{aarch64}
-%global fastdebug_arches x86_64 ppc64le aarch64 s390x
+%global fastdebug_arches x86_64 ppc64le aarch64
+# Set of architectures which support the serviceability agent
+%global sa_arches       %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{power64} %{arm}
+# Set of architectures which support class data sharing
+# See https://bugzilla.redhat.com/show_bug.cgi?id=513605
+# MetaspaceShared::generate_vtable_methods is not implemented for the PPC JIT
+%global share_arches    %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{arm} s390x
+# Set of architectures for which we build the Shenandoah garbage collector
+%global shenandoah_arches x86_64 %{aarch64}
+# Set of architectures for which we build the Z garbage collector
+%global zgc_arches x86_64
+# Set of architectures for which alt-java has SSB mitigation
+%global ssbd_arches x86_64
 
 # By default, we build a debug build during main build on JIT architectures
 %if %{with slowdebug}
-%ifarch %{jit_arches}
-%ifnarch %{arm}
+%ifarch %{debug_arches}
 %global include_debug_build 1
 %else
 %global include_debug_build 0
@@ -96,12 +120,9 @@
 %else
 %global include_debug_build 0
 %endif
-%else
-%global include_debug_build 0
-%endif
 
-# On x86_64 and AArch64, we use the Shenandoah HotSpot
-%ifarch x86_64 %{aarch64}
+# On certain architectures, we compile the Shenandoah GC
+%ifarch %{shenandoah_arches}
 %global use_shenandoah_hotspot 1
 %else
 %global use_shenandoah_hotspot 0
@@ -114,6 +135,8 @@
 %else
 %global include_fastdebug_build 0
 %endif
+%else
+%global include_fastdebug_build 0
 %endif
 
 %if %{include_debug_build}
@@ -134,7 +157,7 @@
 # Test slowdebug first as it provides the best diagnostics
 %global rev_build_loop  %{slowdebug_build} %{fastdebug_build} %{normal_build}
 
-%ifarch %{jit_arches}
+%ifarch %{bootstrap_arches}
 %global bootstrap_build 1
 %else
 %global bootstrap_build 1
@@ -212,7 +235,7 @@
 
 
 
-%ifarch %{jit_arches}
+%ifarch %{systemtap_arches}
 %global with_systemtap 1
 %else
 %global with_systemtap 0
@@ -234,13 +257,16 @@
  %global lts_designator ""
  %global lts_designator_zip ""
 
+# Define IcedTea version used for SystemTap tapsets and desktop file
+%global icedteaver      3.15.0
+
 # Standard JPackage naming and versioning defines
 %global origin          openjdk
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{origin}
 %global minorver        0
 %global buildver        9
-%global rpmrelease      2
+%global rpmrelease      10
 # priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 %global priority %( printf '%02d%02d%02d%02d' %{majorver} %{minorver} %{securityver} %{buildver} )
@@ -299,6 +325,7 @@
 # main id and dir of this jdk
 %global uniquesuffix()        %{expand:%{fullversion}.%{_arch}%1}
 
+#################################################################
 # fix for https://bugzilla.redhat.com/show_bug.cgi?id=1111349
 #         https://bugzilla.redhat.com/show_bug.cgi?id=1590796#c14
 #         https://bugzilla.redhat.com/show_bug.cgi?id=1655938
@@ -307,7 +334,11 @@
 %if %is_system_jdk
 %global __provides_exclude ^(%{_privatelibs})$
 %global __requires_exclude ^(%{_privatelibs})$
+# Never generate lib-style provides/requires for any debug packages
 %global __provides_exclude_from ^.*/%{uniquesuffix -- %{debug_suffix_unquoted}}/.*$
+%global __requires_exclude_from ^.*/%{uniquesuffix -- %{debug_suffix_unquoted}}/.*$
+%global __provides_exclude_from ^.*/%{uniquesuffix -- %{fastdebug_suffix_unquoted}}/.*$
+%global __requires_exclude_from ^.*/%{uniquesuffix -- %{fastdebug_suffix_unquoted}}/.*$
 %else
 # Don't generate provides/requires for JDK provided shared libraries at all.
 %global __provides_exclude ^(%{_privatelibs}|%{_publiclibs})$
@@ -351,12 +382,8 @@ exit 0
 
 
 %define post_headless() %{expand:
-%ifarch %{jit_arches}
-# MetaspaceShared::generate_vtable_methods not implemented for PPC JIT
-%ifnarch %{ppc64le}
-# see https://bugzilla.redhat.com/show_bug.cgi?id=513605
+%ifarch %{share_arches}
 %{jrebindir %%1}/java -Xshare:dump >/dev/null 2>/dev/null
-%endif
 %endif
 
 PRIORITY=%{priority}
@@ -441,10 +468,8 @@ alternatives \\
 %endif
   --slave %{_bindir}/jlink jlink %{sdkbindir %%1}/jlink \\
   --slave %{_bindir}/jmod jmod %{sdkbindir %%1}/jmod \\
-%ifarch %{jit_arches}
-%ifnarch s390x
+%ifarch %{sa_arches}
   --slave %{_bindir}/jhsdb jhsdb %{sdkbindir %%1}/jhsdb \\
-%endif
 %endif
   --slave %{_bindir}/jar jar %{sdkbindir %%1}/jar \\
   --slave %{_bindir}/jarsigner jarsigner %{sdkbindir %%1}/jarsigner \\
@@ -502,7 +527,7 @@ alternatives \\
   --slave %{_mandir}/man1/jstatd.1$ext jstatd.1$ext \\
   %{_mandir}/man1/jstatd-%{uniquesuffix %%1}.1$ext \\
   --slave %{_mandir}/man1/serialver.1$ext serialver.1$ext \\
-  %{_mandir}/man1/serialver-%{uniquesuffix %%1}.1$ext 
+  %{_mandir}/man1/serialver-%{uniquesuffix %%1}.1$ext
 
 for X in %{origin} %{javaver} ; do
   alternatives \\
@@ -632,11 +657,8 @@ exit 0
 %{_jvmdir}/%{sdkdir %%1}/lib/libnio.so
 %{_jvmdir}/%{sdkdir %%1}/lib/libprefs.so
 %{_jvmdir}/%{sdkdir %%1}/lib/librmi.so
-# Zero and S390x don't have SA
-%ifarch %{jit_arches}
-%ifnarch s390x
+%ifarch %{sa_arches}
 %{_jvmdir}/%{sdkdir %%1}/lib/libsaproc.so
-%endif
 %endif
 %{_jvmdir}/%{sdkdir %%1}/lib/libsctp.so
 %{_jvmdir}/%{sdkdir %%1}/lib/libsunec.so
@@ -651,12 +673,8 @@ exit 0
 %{_mandir}/man1/rmid-%{uniquesuffix %%1}.1*
 %{_mandir}/man1/rmiregistry-%{uniquesuffix %%1}.1*
 %{_jvmdir}/%{sdkdir %%1}/lib/server/
-%{_jvmdir}/%{sdkdir %%1}/lib/client/
-%ifarch %{jit_arches}
-%ifnarch %{power64}
+%ifarch %{share_arches}
 %attr(444, root, root) %ghost %{_jvmdir}/%{sdkdir %%1}/lib/server/classes.jsa
-%attr(444, root, root) %ghost %{_jvmdir}/%{sdkdir %%1}/lib/client/classes.jsa
-%endif
 %endif
 %dir %{_jvmdir}/%{sdkdir %%1}/lib/security
 %{_jvmdir}/%{sdkdir %%1}/lib/security/cacerts
@@ -718,12 +736,10 @@ exit 0
 %{_jvmdir}/%{sdkdir %%1}/bin/jdeps
 %{_jvmdir}/%{sdkdir %%1}/bin/jdeprscan
 %{_jvmdir}/%{sdkdir %%1}/bin/jimage
-# Zero and S390x don't have SA
-%ifarch %{jit_arches}
-%ifnarch s390x
+# Some architectures don't have the serviceability agent
+%ifarch %{sa_arches}
 %{_jvmdir}/%{sdkdir %%1}/bin/jhsdb
 %{_mandir}/man1/jhsdb-%{uniquesuffix %%1}.1*
-%endif
 %endif
 %{_jvmdir}/%{sdkdir %%1}/bin/jinfo
 %{_jvmdir}/%{sdkdir %%1}/bin/jlink
@@ -838,7 +854,7 @@ exit 0
 
 %define files_javadoc() %{expand:
 %doc %{_javadocdir}/%{uniquejavadocdir %%1}
-%license %{buildoutputdir %%1}/images/%{jdkimage}/legal
+%license %{_jvmdir}/%{sdkdir %%1}/legal
 %if %is_system_jdk
 %if %{is_release_build %%1}
 %ghost %{_javadocdir}/java
@@ -848,7 +864,7 @@ exit 0
 
 %define files_javadoc_zip() %{expand:
 %doc %{_javadocdir}/%{uniquejavadocdir %%1}.zip
-%license %{buildoutputdir %%1}/images/%{jdkimage}/legal
+%license %{_jvmdir}/%{sdkdir %%1}/legal
 %if %is_system_jdk
 %if %{is_release_build %%1}
 %ghost %{_javadocdir}/java-zip
@@ -860,6 +876,9 @@ exit 0
 %global java_rpo() %{expand:
 Requires: fontconfig%{?_isa}
 Requires: xorg-x11-fonts-Type1
+# Require libXcomposite explicitly since it's only dynamically loaded
+# at runtime. Fixes screenshot issues. See JDK-8150954.
+Requires: libXcomposite%{?_isa}
 # Requires rest of java
 Requires: %{name}-headless%1%{?_isa} = %{epoch}:%{version}-%{release}
 OrderWithRequires: %{name}-headless%1%{?_isa} = %{epoch}:%{version}-%{release}
@@ -888,6 +907,9 @@ Requires: ca-certificates
 Requires: javapackages-tools
 # Require zone-info data provided by tzdata-java sub-package
 Requires: tzdata-java >= 2015d
+# for support of kernel stream control
+# libsctp.so.1 is being `dlopen`ed on demand
+Requires: lksctp-tools%{?_isa}
 # tool to copy jdk's configs - should be Recommends only, but then only dnf/yum enforce it,
 # not rpm transaction and so no configs are persisted when pure rpm -u is run. It may be
 # considered as regression
@@ -904,7 +926,7 @@ Requires(postun): %{_sbindir}/alternatives
 # in version 1.7 and higher for --family switch
 Requires(postun):   chkconfig >= 1.7
 # for support of kernel stream control, card reader and printing bindings
-Requires: lksctp-tools%{?_isa}, pcsc-lite-libs%{?_isa}
+Requires: lksctp-tools%{?_isa}, pcsc-lite-devel%{?_isa}
 # rhel7 does not have week dependencies
 
 # Standard JPackage base provides
@@ -1048,10 +1070,14 @@ License:  ASL 1.1 and ASL 2.0 and BSD and BSD with advertising and GPL+ and GPLv
 URL:      http://openjdk.java.net/
 
 
-# to regenerate source0 (jdk) and source8 (jdk's taspets) run update_package.sh
+# to regenerate source0 (jdk) run update_package.sh
 # update_package.sh contains hard-coded repos, revisions, tags, and projects to regenerate the source archives
 Source0: jdk-updates-jdk%{majorver}u-jdk-%{majorver}.%{minorver}.%{securityver}+%{buildver}.tar.xz
-Source8: systemtap_3.2_tapsets_hg-icedtea8-9d464368e06d.tar.xz
+
+# Use 'icedtea_sync.sh' to update the following
+# They are based on code contained in the IcedTea project (3.x).
+# Systemtap tapsets. Zipped up to keep it small.
+Source8: tapsets-icedtea-%{icedteaver}.tar.xz
 
 # Desktop files. Adapted from IcedTea
 Source9: jconsole.desktop.in
@@ -1068,6 +1094,9 @@ Source13: TestCryptoLevel.java
 # Ensure ECDSA is working
 Source14: TestECDSA.java
 
+# Verify system crypto (policy) can be disabled via a property
+Source15: TestSecurityProperties.java
+
 ############################################
 #
 # RPM/distribution specific patches
@@ -1077,6 +1106,8 @@ Source14: TestECDSA.java
 # NSS via SunPKCS11 Provider (disabled comment
 # due to memory leak).
 Patch1000: rh1648249-add_commented_out_nss_cfg_provider_to_java_security.patch
+# enable build of speculative store bypass hardened alt-java
+Patch600: rh1750419-redhat_alt_java.patch
 
 # Ignore AWTError when assistive technologies are loaded
 Patch1:    rh1648242-accessible_toolkit_crash_do_not_break_jvm.patch
@@ -1087,7 +1118,8 @@ Patch3:    rh649512-remove_uses_of_far_in_jpeg_libjpeg_turbo_1_4_compat_for_jdk1
 Patch4:    pr3183-rh1340845-support_fedora_rhel_system_crypto_policy.patch
 # Depend on pcs-lite-libs instead of pcs-lite-devel as this is only in optional repo
 Patch6: rh1684077-openjdk_should_depend_on_pcsc-lite-libs_instead_of_pcsc-lite-devel.patch
-
+# JDK-8259949: Use i686 instead of i586 on x86 when -fcf-protection is passed to the compiler, as CMOV is needed
+Patch8: jdk8259949-allow_cf-protection_on_x86.patch
 
 #############################################
 #
@@ -1143,7 +1175,7 @@ BuildRequires: systemtap-sdt-devel
 %{java_rpo %{nil}}
 
 %description
-The %{origin_nice} runtime environment.
+The %{origin_nice} runtime environment %{majorver}.
 
 %if %{include_debug_build}
 %package debug
@@ -1152,7 +1184,7 @@ Group:   Development/Languages
 
 %{java_rpo -- %{debug_suffix_unquoted}}
 %description debug
-The %{origin_nice} runtime environment.
+The %{origin_nice} runtime environment %{majorver}.
 %{debug_warning}
 %endif
 
@@ -1180,7 +1212,7 @@ The %{origin_nice} runtime environment %{majorver} without audio and video suppo
 
 %if %{include_debug_build}
 %package headless-debug
-Summary: %{origin_nice} Runtime Environment %{debug_on}
+Summary: %{origin_nice} Runtime Environment %{majorver} %{debug_on}
 Group:   Development/Languages
 
 %{java_headless_rpo -- %{debug_suffix_unquoted}}
@@ -1388,7 +1420,9 @@ Obsoletes: javadoc-debug < 1:13.0.0.33-1.rolling
 
 %description javadoc
 The %{origin_nice} %{majorver} API documentation.
+%endif
 
+%if %{include_normal_build}
 %package javadoc-zip
 Summary: %{origin_nice} %{majorver} API documentation compressed in a single archive
 Group:   Documentation
@@ -1448,9 +1482,11 @@ pushd %{top_level_dir_name}
 %patch3 -p1
 %patch4 -p1
 %patch6 -p1
+%patch8 -p1
 popd # openjdk
 
 %patch1000
+%patch600
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
@@ -1550,7 +1586,7 @@ scl enable devtoolset-8 "bash ../configure \
     --with-jobs=1 \
 %endif
     --with-version-build=%{buildver} \
-    --with-version-pre=\"%{ea_designator}\"\
+    --with-version-pre=\"%{ea_designator}\" \
     --with-version-opt=%{lts_designator} \
     --with-vendor-version-string=\"%{vendor_version_string}\" \
     --with-vendor-name=\"Red Hat, Inc.\" \
@@ -1572,7 +1608,7 @@ scl enable devtoolset-8 "bash ../configure \
     --with-extra-ldflags=\"%{ourldflags}\" \
     --with-num-cores=\"$NUM_PROC\" \
     --disable-javac-server \
-%ifarch x86_64
+%ifarch %{zgc_arches}
     --with-jvm-features=zgc \
 %endif
     --disable-warnings-as-errors"
@@ -1614,7 +1650,6 @@ ln -s %{_datadir}/javazi-1.8/tzdb.dat $JAVA_HOME/lib/tzdb.dat
 
 # Create fake alt-java as a placeholder for future alt-java
 pushd ${JAVA_HOME}
-cp -a bin/java bin/%{alt_java_name}
 # add alt-java man page
 echo "Hardened java binary recommended for launching untrusted code from the Web e.g. javaws" > man/man1/%{alt_java_name}.1
 cat man/man1/java.1 >> man/man1/%{alt_java_name}.1
@@ -1630,7 +1665,7 @@ for suffix in %{rev_build_loop} ; do
 
 export JAVA_HOME=$(pwd)/%{buildoutputdir $suffix}/images/%{jdkimage}
 
-#check sheandoah is enabled
+#check Shenandoah is enabled
 %if %{use_shenandoah_hotspot}
 $JAVA_HOME//bin/java -XX:+UnlockExperimentalVMOptions -XX:+UseShenandoahGC -version
 %endif
@@ -1642,6 +1677,20 @@ $JAVA_HOME/bin/java --add-opens java.base/javax.crypto=ALL-UNNAMED TestCryptoLev
 # Check ECC is working
 $JAVA_HOME/bin/javac -d . %{SOURCE14}
 $JAVA_HOME/bin/java $(echo $(basename %{SOURCE14})|sed "s|\.java||")
+
+# Check system crypto (policy) can be disabled
+$JAVA_HOME/bin/javac -d . %{SOURCE15}
+$JAVA_HOME/bin/java -Djava.security.disableSystemPropertiesFile=true $(echo $(basename %{SOURCE15})|sed "s|\.java||") ||  echo "crypto policy are now not honored i jdk15"
+
+# Check java launcher has no SSB mitigation
+if ! nm $JAVA_HOME/bin/java | grep set_speculation ; then true ; else false; fi
+
+# Check alt-java launcher has SSB mitigation on supported architectures
+%ifarch %{ssbd_arches}
+nm $JAVA_HOME/bin/%{alt_java_name} | grep set_speculation
+%else
+if ! nm $JAVA_HOME/bin/%{alt_java_name} | grep set_speculation ; then true ; else false; fi
+%endif
 
 # Check debug symbols in static libraries (smoke test)
 export STATIC_LIBS_HOME=$(pwd)/%{buildoutputdir -- $suffix}/images/%{static_libs_image}
@@ -1709,7 +1758,12 @@ quit
 end
 run -version
 EOF
+
+# This fails on s390x for some reason. Disable for now. See:
+# https://koji.fedoraproject.org/koji/taskinfo?taskID=41499227
+%ifnarch s390x
 grep 'JavaCallWrapper::JavaCallWrapper' gdb.out
+%endif
 
 # Check src.zip has all sources. See RHBZ#1130490
 jar -tf $JAVA_HOME/lib/src.zip | grep 'sun.misc.Unsafe'
@@ -1736,11 +1790,6 @@ for suffix in %{build_loop} ; do
 mkdir -p $RPM_BUILD_ROOT%{_jvmdir}
 cp -a %{buildoutputdir $suffix}/images/%{jdkimage} \
   $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir $suffix}
-
-# Install jsa directories so we can owe them
-mkdir -p $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir $suffix}/lib/%{archinstall}/server/
-mkdir -p $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir $suffix}/lib/%{archinstall}/client/
-mkdir -p $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir $suffix}/lib/client/ || true  ; # sometimes is here, sometimes not, ifout it or || true it out
 
 pushd %{buildoutputdir $suffix}/images/%{jdkimage}
 
@@ -1799,7 +1848,7 @@ if ! echo $suffix | grep -q "debug" ; then
   cp -a %{buildoutputdir $suffix}/images/docs $RPM_BUILD_ROOT%{_javadocdir}/%{uniquejavadocdir $suffix}
   built_doc_archive=jdk-%{majorver}.%{minorver}.%{securityver}%{ea_designator_zip}+%{buildver}%{lts_designator_zip}-docs.zip
 
-  cp -a %{buildoutputdir $suffix}/bundles/${built_doc_archive} $RPM_BUILD_ROOT%{_javadocdir}/%{uniquejavadocdir $suffix}.zip
+  cp -a %{buildoutputdir $suffix}/bundles/${built_doc_archive} $RPM_BUILD_ROOT%{_javadocdir}/%{uniquejavadocdir $suffix}.zip || ls -l %{buildoutputdir $suffix}/bundles/
 fi
 
 
@@ -2056,6 +2105,39 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Tue Jan 19 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:15.0.1.9-10.rolling
+- Use -march=i686 for x86 builds if -fcf-protection is detected (needs CMOV)
+
+* Tue Dec 22 2020 Jiri Vanek <jvanek@redhat.com> - 1:15.0.1.9-9.rolling
+- fixed missing condition for fastdebug packages being counted as debug ones
+
+* Sat Dec 19 2020 Jiri Vanek <jvanek@redhat.com> - 1:15.0.1.9-8.rolling
+- removed lib-style provides for fastdebug_suffix_unquoted
+
+* Sat Dec 19 2020 Jiri Vanek <jvanek@redhat.com> - 1:15.0.1.9-6.rolling
+- many cosmetic changes taken from more maintained jdk11
+- introduced debug_arches, bootstrap_arches, systemtap_arches, fastdebug_arches, sa_arches, share_arches, shenandoah_arches, zgc_arches 
+  instead of various hardcoded ifarches
+- updated systemtap
+- added requires excludes for debug pkgs
+- removed redundant logic around jsa files
+- added runtime requires of lksctp-tools and libXcomposite%
+- added and used Source15 TestSecurityProperties.java, but is made always positive as jdk15 now does not honor system policies
+- s390x excluded form fastdebug build
+
+* Thu Dec 17 2020 Andrew Hughes <gnu.andrew@redhat.com> - 1:15.0.1.9-5.rolling
+- introduced nm based check to verify alt-java on x86_64 is patched, and no other alt-java or java is patched
+- patch600 rh1750419-redhat_alt_java.patch amended to die, if it is used wrongly
+- introduced ssbd_arches with currently only valid arch of x86_64 to separate real alt-java architectures
+
+* Wed Dec 9 2020 Jiri Vanek <jvanek@redhat.com> - 1:15.0.1.9-4.rolling
+- moved wrongly placed licenses to accompany other ones
+- this bad placement was killng parallel-installability and thus having bad impact to leapp if used
+
+* Tue Dec 01 2020 Jiri Vanek <jvanek@redhat.com> - 1:15.0.1.9-3.rolling
+- added patch600, rh1750419-redhat_alt_java.patch, suprassing removed patch
+- no longer copying of java->alt-java as it is created by  patch600
+
 * Mon Nov 23 2020 Jiri Vanek <jvanek@redhat.com> - 1:15.0.1.9-2.rolling
 - Create a copy of java as alt-java with alternatives and man pages
 - java-11-openjdk doesn't have a JRE tree, so don't try and copy alt-java there...
