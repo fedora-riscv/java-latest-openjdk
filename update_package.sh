@@ -35,7 +35,6 @@ fi
 export PROJECT_NAME="jdk"
 export REPO_NAME="jdk15"
 export VERSION="jdk-15+36"
-
 export COMPRESSION=xz
 # unset tapsets overrides
 export OPENJDK_URL=""
