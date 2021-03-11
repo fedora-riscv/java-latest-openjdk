@@ -272,7 +272,7 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{origin}
 %global buildver        36
-%global rpmrelease      0
+%global rpmrelease      1
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 # Using 10 digits may overflow the int used for priority, so we combine the patch and build versions
@@ -949,7 +949,7 @@ Requires(postun): %{alternatives_requires}
 # in version 1.7 and higher for --family switch
 Requires(postun):   chkconfig >= 1.7
 # for support of kernel stream control, card reader and printing bindings
-Requires: lksctp-tools%{?_isa}, pcsc-lite-devel%{?_isa}
+Requires: lksctp-tools%{?_isa}, pcsc-lite-libs%{?_isa}
 # rhel7 does not have week dependencies
 
 # Standard JPackage base provides
@@ -2161,7 +2161,10 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
-* Fri Feb 19 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:16.0.0.0.36-0.0.ea.rolling
+* Tue Mar 09 2021 Jiri Vanek <jvanek@redhat.com> - 1:16.0.0.0.36-1.rolling
+- fixed suggests of wrong pcsc-lite-devel%{?_isa} to correct pcsc-lite-libs%{?_isa}
+
+* Fri Feb 19 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:16.0.0.0.36-0.rolling
 - Update to jdk-16.0.0.0+36
 - Update tarball generation script to use git following OpenJDK's move to github
 - Update tarball generation script to use PR3823 which handles JDK-8235710 changes
