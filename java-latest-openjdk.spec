@@ -2158,6 +2158,10 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Sun Apr 25 2021 Petra Alice Mikova <pmikova@redhat.com> - 1:16.0.1.0.9-1.rolling
+- update to 16.0.1+9 april cpu tag
+- dropped jdk8259949-allow_cf-protection_on_x86.patch 
+
 * Tue Mar 09 2021 Jiri Vanek <jvanek@redhat.com> - 1:16.0.0.0.36-1.rolling
 - fixed suggests of wrong pcsc-lite-devel%{?_isa} to correct pcsc-lite-libs%{?_isa}
 - bumped buildjdkver to build by itself - 16
