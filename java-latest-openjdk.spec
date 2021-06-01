@@ -1171,8 +1171,7 @@ Patch3:    rh649512-remove_uses_of_far_in_jpeg_libjpeg_turbo_1_4_compat_for_jdk1
 Patch4:    pr3183-rh1340845-support_fedora_rhel_system_crypto_policy.patch
 # Depend on pcs-lite-libs instead of pcs-lite-devel as this is only in optional repo
 Patch6: rh1684077-openjdk_should_depend_on_pcsc-lite-libs_instead_of_pcsc-lite-devel.patch
-# RH1582504: Use RSA as default for keytool, as DSA is disabled in all crypto policies except LEGACY
-Patch1003: rh1842572-rsa_default_for_keytool.patch
+Patch7: pr3695-toggle_system_crypto_policy.patch
 
 # FIPS support patches
 # RH1655466: Support RHEL FIPS mode using SunPKCS11 provider
@@ -1539,13 +1538,13 @@ pushd %{top_level_dir_name}
 %patch3 -p1
 %patch4 -p1
 %patch6 -p1
+%patch7 -p1
 popd # openjdk
 
 %patch1000
 %patch600
 %patch1001
 %patch1002
-%patch1003
 %patch1004
 %patch1007
 
@@ -2259,7 +2258,12 @@ cjc.mainProgram(args)
 %changelog
 * Tue Jun 29 2021 Jiri Vanek <jvanek@redhat.com> -1:16.0.1.0.9-5.rolling
 - renamed source15 to source17 to match el8
-- added fips support
+- added fips support:
+- added pr3695-toggle_system_crypto_policy.patch ; missing prerequisity
+- removed rh1655466-global_crypto_and_fips.patch; jdk16 do not have default algorithm, it throws exception
+- adapted rh1655466-global_crypto_and_fips.patch
+- adapted rh1860986-disable_tlsv1.3_in_fips_mode.patch (?)
+- adapted rh1915071-always_initialise_configurator_access.patch
 
 * Thu Jun 17 2021 Petra Alice Mikova <pmikova@redhat.com> - 1:16.0.1.0.9-4.rolling
 - fix patch rh1648249-add_commented_out_nss_cfg_provider_to_java_security.patch which made the SunPKCS provider show up again

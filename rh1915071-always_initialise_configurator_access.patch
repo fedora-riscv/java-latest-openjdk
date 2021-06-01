@@ -6,7 +6,7 @@ diff --git openjdk.orig/src/java.base/share/classes/java/security/Security.java 
  import jdk.internal.event.EventHelper;
  import jdk.internal.event.SecurityPropertyModificationEvent;
 +import jdk.internal.misc.JavaSecuritySystemConfiguratorAccess;
- import jdk.internal.misc.SharedSecrets;
+ import jdk.internal.access.SharedSecrets;
  import jdk.internal.util.StaticProperty;
  import sun.security.util.Debug;
 @@ -74,6 +75,15 @@
