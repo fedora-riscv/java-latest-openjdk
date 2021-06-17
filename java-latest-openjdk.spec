@@ -298,7 +298,7 @@
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
 %global buildver        9
-%global rpmrelease      2
+%global rpmrelease      3
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 # Using 10 digits may overflow the int used for priority, so we combine the patch and build versions
@@ -2229,6 +2229,10 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Thu Jun 17 2021 Petra Alice Mikova <pmikova@redhat.com> - 1:16.0.1.0.9-4.rolling
+- fix patch rh1648249-add_commented_out_nss_cfg_provider_to_java_security.patch which made the SunPKCS provider show up again
+- Resolves: rhbz#1971120
+
 * Fri Apr 29 2021 Jiri Vanek <jvanek@redhat.com> -  1:16.0.1.0.9-2.rolling
 - adapted to debug handling  in newer cjc
 - The rest of the "rpm 4.17" patch must NOT be backported, as on rpm 4.16 and down, it would casue double execution
