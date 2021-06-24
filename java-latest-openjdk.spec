@@ -2233,7 +2233,7 @@ require "copy_jdk_configs.lua"
 - fix patch rh1648249-add_commented_out_nss_cfg_provider_to_java_security.patch which made the SunPKCS provider show up again
 - Resolves: rhbz#1971120
 
-* Fri Apr 29 2021 Jiri Vanek <jvanek@redhat.com> -  1:16.0.1.0.9-2.rolling
+* Thu Apr 29 2021 Jiri Vanek <jvanek@redhat.com> -  1:16.0.1.0.9-2.rolling
 - adapted to debug handling  in newer cjc
 - The rest of the "rpm 4.17" patch must NOT be backported, as on rpm 4.16 and down, it would casue double execution
 - Disable copy-jdk-configs for Flatpak builds
