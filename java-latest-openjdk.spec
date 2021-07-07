@@ -170,10 +170,8 @@
 %endif
 
 # If you disable both builds, then the build fails
-# Note that the debug build requires the normal build for docs
-%global build_loop %{normal_build} %{fastdebug_build} %{slowdebug_build}
-# Test slowdebug first as it provides the best diagnostics
-%global rev_build_loop  %{slowdebug_build} %{fastdebug_build} %{normal_build}
+# Build and test slowdebug first as it provides the best diagnostics
+%global build_loop  %{slowdebug_build} %{fastdebug_build} %{normal_build}
 
 %if %{include_staticlibs}
 %global staticlibs_loop %{staticlibs_suffix}
@@ -300,7 +298,7 @@
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
 %global buildver        26
-%global rpmrelease      2
+%global rpmrelease      4
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 # Using 10 digits may overflow the int used for priority, so we combine the patch and build versions
@@ -1508,10 +1506,6 @@ if [ %{include_debug_build} -eq 0 -a  %{include_normal_build} -eq 0 -a  %{includ
   echo "You have disabled all builds (normal,fastdebug,slowdebug). That is a no go."
   exit 14
 fi
-if [ %{include_normal_build} -eq 0 ] ; then
-  echo "You have disabled the normal build, but this is required to provide docs for the debug build."
-  exit 15
-fi
 %setup -q -c -n %{uniquesuffix ""} -T -a 0
 # https://bugzilla.redhat.com/show_bug.cgi?id=1189084
 prioritylength=`expr length %{priority}`
@@ -1765,7 +1759,7 @@ done # end of release / debug cycle loop
 %check
 
 # We test debug first as it will give better diagnostics on a crash
-for suffix in %{rev_build_loop} ; do
+for suffix in %{build_loop} ; do
 
 top_dir_abs_main_build_path=$(pwd)/%{buildoutputdir -- ${suffix}%{main_suffix}}
 %if %{include_staticlibs}
@@ -2256,6 +2250,10 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Fri Jul 02 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.26-0.4.ea.rolling
+- Use the "reverse" build loop (debug first) as the main and only build loop to get more diagnostics.
+- Remove restriction on disabling product build, as debug packages no longer have javadoc packages.
+
 * Thu Jun 24 2021 Severin Gehwolf <sgehwolf@redhat.com> - 1:17.0.0.0.26-0.2.ea.rolling
 - Re-enable TestSecurityProperties after inclusion of PR3695
 
