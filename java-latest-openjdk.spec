@@ -249,7 +249,7 @@
 # New Version-String scheme-style defines
 %global featurever 16
 %global interimver 0
-%global updatever 1
+%global updatever 2
 %global patchver 0
 # If you bump featurever, you must bump also vendor_version_string
 # Used via new version scheme. JDK 16 was
@@ -271,8 +271,8 @@
 %global origin          openjdk
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{origin}
-%global buildver        9
-%global rpmrelease      3
+%global buildver        7
+%global rpmrelease      1
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 # Using 10 digits may overflow the int used for priority, so we combine the patch and build versions
@@ -2166,6 +2166,9 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Fri Jul 23 2021 Jiri Vanek <jvanek@redhat.com> - 1:16.0.2.0.7-1.rolling
+- bumped to security update of 16.0.2-ga
+
 * Thu Jun 17 2021 Petra Alice Mikova <pmikova@redhat.com> - 1:16.0.1.0.9-4.rolling
 - fix patch rh1648249-add_commented_out_nss_cfg_provider_to_java_security.patch which made the SunPKCS provider show up again
 - Resolves: rhbz#1971120
