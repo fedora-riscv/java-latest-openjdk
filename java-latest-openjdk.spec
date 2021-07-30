@@ -297,8 +297,8 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        26
-%global rpmrelease      4
+%global buildver        33
+%global rpmrelease      0
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 # Using 10 digits may overflow the int used for priority, so we combine the patch and build versions
@@ -2250,6 +2250,10 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Fri Jul 30 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.33-0.0.ea.rolling
+- Update to jdk-17+33, including JDWP fix and July 2021 CPU
+- Resolves: rhbz#1972529
+
 * Fri Jul 02 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.26-0.4.ea.rolling
 - Use the "reverse" build loop (debug first) as the main and only build loop to get more diagnostics.
 - Remove restriction on disabling product build, as debug packages no longer have javadoc packages.
