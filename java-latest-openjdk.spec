@@ -298,7 +298,7 @@
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
 %global buildver        9
-%global rpmrelease      3
+%global rpmrelease      5
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 # Using 10 digits may overflow the int used for priority, so we combine the patch and build versions
@@ -754,8 +754,9 @@ exit 0
 %config(noreplace) %{etcjavadir -- %{?1}}/conf/security/java.security
 %config(noreplace) %{etcjavadir -- %{?1}}/conf/logging.properties
 %config(noreplace) %{etcjavadir -- %{?1}}/conf/security/nss.cfg
+%config(noreplace) %{etcjavadir -- %{?1}}/conf/security/nss.fips.cfg
 %config(noreplace) %{etcjavadir -- %{?1}}/conf/management/jmxremote.access
-# these are config templates, thus not config-noreplace
+# this is conifg template, thus not config-noreplace
 %config  %{etcjavadir -- %{?1}}/conf/management/jmxremote.password.template
 %config  %{etcjavadir -- %{?1}}/conf/sdp/sdp.conf.template
 %config(noreplace) %{etcjavadir -- %{?1}}/conf/management/management.properties
@@ -976,6 +977,8 @@ OrderWithRequires: copy-jdk-configs
 %endif
 # for printing support
 Requires: cups-libs
+# for FIPS PKCS11 provider
+Requires: nss
 # Post requires alternatives to install tool alternatives
 Requires(post):   %{alternatives_requires}
 # Postun requires alternatives to uninstall tool alternatives
@@ -1143,8 +1146,11 @@ Source13: TestCryptoLevel.java
 # Ensure ECDSA is working
 Source14: TestECDSA.java
 
+# nss fips configuration file
+Source15: nss.fips.cfg.in
+
 # Verify system crypto (policy) can be disabled via a property
-Source15: TestSecurityProperties.java
+Source17: TestSecurityProperties.java
 
 ############################################
 #
@@ -1152,21 +1158,30 @@ Source15: TestSecurityProperties.java
 #
 ############################################
 
-# NSS via SunPKCS11 Provider (disabled comment
-# due to memory leak).
-Patch1000: rh1648249-add_commented_out_nss_cfg_provider_to_java_security.patch
-# enable build of speculative store bypass hardened alt-java
-Patch600: rh1750419-redhat_alt_java.patch
-
 # Ignore AWTError when assistive technologies are loaded
 Patch1:    rh1648242-accessible_toolkit_crash_do_not_break_jvm.patch
 # Restrict access to java-atk-wrapper classes
 Patch2:    rh1648644-java_access_bridge_privileged_security.patch
+# NSS via SunPKCS11 Provider (disabled due to memory leak).
+Patch1000: rh1648249-add_commented_out_nss_cfg_provider_to_java_security.patch
+# enable build of speculative store bypass hardened alt-java
+Patch600: rh1750419-redhat_alt_java.patch
 Patch3:    rh649512-remove_uses_of_far_in_jpeg_libjpeg_turbo_1_4_compat_for_jdk10_and_up.patch
 # Follow system wide crypto policy RHBZ#1249083
 Patch4:    pr3183-rh1340845-support_fedora_rhel_system_crypto_policy.patch
 # Depend on pcs-lite-libs instead of pcs-lite-devel as this is only in optional repo
 Patch6: rh1684077-openjdk_should_depend_on_pcsc-lite-libs_instead_of_pcsc-lite-devel.patch
+Patch7: pr3695-toggle_system_crypto_policy.patch
+
+# FIPS support patches
+# RH1655466: Support RHEL FIPS mode using SunPKCS11 provider
+Patch1001: rh1655466-global_crypto_and_fips.patch
+# RH1818909: No ciphersuites availale for SSLSocket in FIPS mode
+Patch1002: rh1818909-fips_default_keystore_type.patch
+# RH1860986: Disable TLSv1.3 with the NSS-FIPS provider until PKCS#11 v3.0 support is available
+Patch1004: rh1860986-disable_tlsv1.3_in_fips_mode.patch
+# RH1915071: Always initialise JavaSecuritySystemConfiguratorAccess
+Patch1007: rh1915071-always_initialise_configurator_access.patch
 
 #############################################
 #
@@ -1523,10 +1538,15 @@ pushd %{top_level_dir_name}
 %patch3 -p1
 %patch4 -p1
 %patch6 -p1
+%patch7 -p1
 popd # openjdk
 
 %patch1000
 %patch600
+%patch1001
+%patch1002
+%patch1004
+%patch1007
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
@@ -1575,6 +1595,9 @@ done
 # Setup nss.cfg
 sed -e "s:@NSS_LIBDIR@:%{NSS_LIBDIR}:g" %{SOURCE11} > nss.cfg
 
+# Setup nss.fips.cfg
+sed -e "s:@NSS_LIBDIR@:%{NSS_LIBDIR}:g" %{SOURCE15} > nss.fips.cfg
+sed -i -e "s:@NSS_SECMOD@:/etc/pki/nssdb:g" nss.fips.cfg
 
 %build
 # How many CPU's do we have?
@@ -1729,6 +1752,9 @@ export JAVA_HOME=${top_dir_abs_main_build_path}/images/%{jdkimage}
 # Install nss.cfg right away as we will be using the JRE above
 install -m 644 nss.cfg $JAVA_HOME/conf/security/
 
+# Install nss.fips.cfg: NSS configuration for global FIPS mode (crypto-policies)
+install -m 644 nss.fips.cfg $JAVA_HOME/conf/security/
+
 # Use system-wide tzdata
 rm $JAVA_HOME/lib/tzdb.dat
 ln -s %{_datadir}/javazi-1.8/tzdb.dat $JAVA_HOME/lib/tzdb.dat
@@ -1769,8 +1795,8 @@ $JAVA_HOME/bin/javac -d . %{SOURCE14}
 $JAVA_HOME/bin/java $(echo $(basename %{SOURCE14})|sed "s|\.java||")
 
 # Check system crypto (policy) can be disabled
-$JAVA_HOME/bin/javac -d . %{SOURCE15}
-$JAVA_HOME/bin/java -Djava.security.disableSystemPropertiesFile=true $(echo $(basename %{SOURCE15})|sed "s|\.java||") ||  echo "crypto policy are now not honored i jdk15"
+$JAVA_HOME/bin/javac -d . %{SOURCE17}
+$JAVA_HOME/bin/java -Djava.security.disableSystemPropertiesFile=true $(echo $(basename %{SOURCE17})|sed "s|\.java||") ||  echo "crypto policy are now not honored i jdk15"
 
 # Check java launcher has no SSB mitigation
 if ! nm $JAVA_HOME/bin/java | grep set_speculation ; then true ; else false; fi
@@ -2229,9 +2255,21 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Tue Jun 29 2021 Jiri Vanek <jvanek@redhat.com> -1:16.0.1.0.9-5.rolling
+- renamed source15 to source17 to match el8
+- added fips support:
+- added pr3695-toggle_system_crypto_policy.patch ; missing prerequisity
+- removed rh1655466-global_crypto_and_fips.patch; jdk16 do not have default algorithm, it throws exception
+- adapted rh1655466-global_crypto_and_fips.patch
+- adapted rh1860986-disable_tlsv1.3_in_fips_mode.patch (?)
+- adapted rh1915071-always_initialise_configurator_access.patch
+
 * Thu Jun 17 2021 Petra Alice Mikova <pmikova@redhat.com> - 1:16.0.1.0.9-4.rolling
 - fix patch rh1648249-add_commented_out_nss_cfg_provider_to_java_security.patch which made the SunPKCS provider show up again
 - Resolves: rhbz#1971120
+
+* Fri May 07 2021 Jiri Vanek <jvanek@redhat.com> - 1:16.0.1.0.9-2.rolling
+- removed cjc backward comaptiblity, to fix when both rpm 4.16 and 4.17 are in transaction
 
 * Thu Apr 29 2021 Jiri Vanek <jvanek@redhat.com> -  1:16.0.1.0.9-2.rolling
 - adapted to debug handling  in newer cjc
