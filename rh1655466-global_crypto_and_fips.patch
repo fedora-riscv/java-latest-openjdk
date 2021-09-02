@@ -197,7 +197,7 @@ diff --git openjdk.orig///src/java.base/share/conf/security/java.security openjd
 +fips.provider.1=SunPKCS11 ${java.home}/conf/security/nss.fips.cfg
 +fips.provider.2=SUN
 +fips.provider.3=SunEC
-+fips.provider.4=SunJSSE SunPKCS11-NSS-FIPS
++fips.provider.4=com.sun.net.ssl.internal.ssl.Provider SunPKCS11-NSS-FIPS
 +
 +#
  # A list of preferred providers for specific algorithms. These providers will
