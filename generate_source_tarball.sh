@@ -130,10 +130,8 @@ pushd "${FILE_NAME_ROOT}"
                 # get PR3823.patch (from http://icedtea.classpath.org/hg/icedtea16) from most correct tag
                 # Do not push it or publish it (see https://icedtea.classpath.org/bugzilla/show_bug.cgi?id=3823)
 		echo "PR3823 not found. Downloading..."
-		# wget https://icedtea.classpath.org/hg/icedtea16/raw-file/tip/patches/pr3823.patch
-		# now using backup server... not sure when it will die...
-		wget https://icedtea.wildebeest.org/hg/icedtea16/raw-file/tip/patches/pr3823.patch
-		echo "Applying ${PWD}/pr3823.patch"
+		wget https://icedtea.classpath.org/hg/icedtea16/raw-file/tip/patches/pr3823.patch
+	        echo "Applying ${PWD}/pr3823.patch"
 		patch -Np1 < pr3823.patch
 		rm pr3823.patch
 	    else
