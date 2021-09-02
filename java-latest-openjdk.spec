@@ -2237,7 +2237,7 @@ cjc.mainProgram(args)
 * Fri May 07 2021 Jiri Vanek <jvanek@redhat.com> - 1:16.0.1.0.9-2.rolling
 - removed cjc backward comaptiblity, to fix when both rpm 4.16 and 4.17 are in transaction
 
-* Thu Apr 29 2021 Jiri Vanek <jvanek@redhat.com> -  1:16.0.1.0.9-2.rolling
+* Fri Apr 29 2021 Jiri Vanek <jvanek@redhat.com> -  1:16.0.1.0.9-2.rolling
 - adapted to debug handling  in newer cjc
 - The rest of the "rpm 4.17" patch must NOT be backported, as on rpm 4.16 and down, it would casue double execution
 - Disable copy-jdk-configs for Flatpak builds
