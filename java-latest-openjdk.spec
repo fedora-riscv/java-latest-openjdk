@@ -81,7 +81,7 @@
 # in alternatives those are slaves and master, very often triplicated by man pages
 # in files all masters and slaves are ghosted
 # the ghosts are here to allow installation via query like `dnf install /usr/bin/java`
-# you can list those files, with appropriate sections: cat *.spec | grep -e --install -e --slave -e post_ 
+# you can list those files, with appropriate sections: cat *.spec | grep -e --install -e --slave -e post_ -e alternatives
 # TODO - fix those hardcoded lists via single list
 # Those files must *NOT* be ghosted for *slowdebug* packages
 # FIXME - if you are moving jshell or jlink or similar, always modify all three sections
@@ -125,6 +125,8 @@
 %global zgc_arches x86_64
 # Set of architectures for which alt-java has SSB mitigation
 %global ssbd_arches x86_64
+# Set of architectures for which java has short vector math library (libsvml.so)
+%global svml_arches x86_64
 
 # By default, we build a debug build during main build on JIT architectures
 %if %{with slowdebug}
@@ -168,10 +170,8 @@
 %endif
 
 # If you disable both builds, then the build fails
-# Note that the debug build requires the normal build for docs
-%global build_loop %{normal_build} %{fastdebug_build} %{slowdebug_build}
-# Test slowdebug first as it provides the best diagnostics
-%global rev_build_loop  %{slowdebug_build} %{fastdebug_build} %{normal_build}
+# Build and test slowdebug first as it provides the best diagnostics
+%global build_loop  %{slowdebug_build} %{fastdebug_build} %{normal_build}
 
 %if %{include_staticlibs}
 %global staticlibs_loop %{staticlibs_suffix}
@@ -272,14 +272,14 @@
 %endif
 
 # New Version-String scheme-style defines
-%global featurever 16
+%global featurever 17
 %global interimver 0
-%global updatever 2
+%global updatever 0
 %global patchver 0
 # If you bump featurever, you must bump also vendor_version_string
-# Used via new version scheme. JDK 16 was
-# GA'ed in March 2020 => 21.3
-%global vendor_version_string 21.3
+# Used via new version scheme. JDK 17 was
+# GA'ed in September 2021 => 21.9
+%global vendor_version_string 21.9
 # buildjdkver is usually same as %%{featurever},
 # but in time of bootstrap of next jdk, it is featurever-1,
 # and this it is better to change it here, on single place
@@ -297,7 +297,7 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        7
+%global buildver        33
 %global rpmrelease      1
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
@@ -321,7 +321,7 @@
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
 # - N%%{?extraver}{?dist} for GA releases
-%global is_ga           1
+%global is_ga           0
 %if %{is_ga}
 %global build_type GA
 %global expected_ea_designator ""
@@ -432,12 +432,7 @@ update-desktop-database %{_datadir}/applications &> /dev/null || :
 exit 0
 }
 
-
-%define post_headless() %{expand:
-%ifarch %{share_arches}
-%{jrebindir -- %{?1}}/java -Xshare:dump >/dev/null 2>/dev/null
-%endif
-
+%define alternatives_java_install() %{expand:
 PRIORITY=%{priority}
 if [ "%{?1}" == %{debug_suffix} ]; then
   let PRIORITY=PRIORITY-1
@@ -449,7 +444,6 @@ alternatives \\
   --slave %{_jvmdir}/jre jre %{_jvmdir}/%{sdkdir -- %{?1}} \\
   --slave %{_bindir}/%{alt_java_name} %{alt_java_name} %{jrebindir -- %{?1}}/%{alt_java_name} \\
   --slave %{_bindir}/keytool keytool %{jrebindir -- %{?1}}/keytool \\
-  --slave %{_bindir}/rmid rmid %{jrebindir -- %{?1}}/rmid \\
   --slave %{_bindir}/rmiregistry rmiregistry %{jrebindir -- %{?1}}/rmiregistry \\
   --slave %{_mandir}/man1/java.1$ext java.1$ext \\
   %{_mandir}/man1/java-%{uniquesuffix -- %{?1}}.1$ext \\
@@ -457,8 +451,6 @@ alternatives \\
   %{_mandir}/man1/%{alt_java_name}-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/keytool.1$ext keytool.1$ext \\
   %{_mandir}/man1/keytool-%{uniquesuffix -- %{?1}}.1$ext \\
-  --slave %{_mandir}/man1/rmid.1$ext rmid.1$ext \\
-  %{_mandir}/man1/rmid-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/rmiregistry.1$ext rmiregistry.1$ext \\
   %{_mandir}/man1/rmiregistry-%{uniquesuffix -- %{?1}}.1$ext 
 
@@ -466,8 +458,13 @@ for X in %{origin} %{javaver} ; do
   alternatives --install %{_jvmdir}/jre-"$X" jre_"$X" %{_jvmdir}/%{sdkdir -- %{?1}} $PRIORITY --family %{name}.%{_arch}
 done
 
-update-alternatives --install %{_jvmdir}/jre-%{javaver}-%{origin} jre_%{javaver}_%{origin} %{_jvmdir}/%{jrelnk -- %{?1}} $PRIORITY  --family %{name}.%{_arch}
+alternatives --install %{_jvmdir}/jre-%{javaver}-%{origin} jre_%{javaver}_%{origin} %{_jvmdir}/%{jrelnk -- %{?1}} $PRIORITY  --family %{name}.%{_arch}
+}
 
+%define post_headless() %{expand:
+%ifarch %{share_arches}
+%{jrebindir -- %{?1}}/java -Xshare:dump >/dev/null 2>/dev/null
+%endif
 
 update-desktop-database %{_datadir}/applications &> /dev/null || :
 /bin/touch --no-create %{_datadir}/icons/hicolor &>/dev/null || :
@@ -504,8 +501,8 @@ exit 0
 %{update_desktop_icons}
 }
 
-%define post_devel() %{expand:
 
+%define alternatives_javac_install() %{expand:
 PRIORITY=%{priority}
 if [ "%{?1}" == %{debug_suffix} ]; then
   let PRIORITY=PRIORITY-1
@@ -515,9 +512,6 @@ ext=.gz
 alternatives \\
   --install %{_bindir}/javac javac %{sdkbindir -- %{?1}}/javac $PRIORITY  --family %{name}.%{_arch} \\
   --slave %{_jvmdir}/java java_sdk %{_jvmdir}/%{sdkdir -- %{?1}} \\
-%ifarch %{aot_arches}
-  --slave %{_bindir}/jaotc jaotc %{sdkbindir -- %{?1}}/jaotc \\
-%endif
   --slave %{_bindir}/jlink jlink %{sdkbindir -- %{?1}}/jlink \\
   --slave %{_bindir}/jmod jmod %{sdkbindir -- %{?1}}/jmod \\
 %ifarch %{sa_arches}
@@ -587,7 +581,9 @@ for X in %{origin} %{javaver} ; do
 done
 
 update-alternatives --install %{_jvmdir}/java-%{javaver}-%{origin} java_sdk_%{javaver}_%{origin} %{_jvmdir}/%{sdkdir -- %{?1}} $PRIORITY  --family %{name}.%{_arch}
+}
 
+%define post_devel() %{expand:
 update-desktop-database %{_datadir}/applications &> /dev/null || :
 /bin/touch --no-create %{_datadir}/icons/hicolor &>/dev/null || :
 
@@ -610,11 +606,11 @@ exit 0
 }
 
 %define posttrans_devel() %{expand:
+%{alternatives_javac_install --  %{?1}}
 %{update_desktop_icons}
 }
 
-%define post_javadoc() %{expand:
-
+%define alternatives_javadoc_install() %{expand:
 PRIORITY=%{priority}
 if [ "%{?1}" == %{debug_suffix} ]; then
   let PRIORITY=PRIORITY-1
@@ -631,8 +627,7 @@ exit 0
 exit 0
 }
 
-%define post_javadoc_zip() %{expand:
-
+%define alternatives_javadoczip_install() %{expand:
 PRIORITY=%{priority}
 if [ "%{?1}" == %{debug_suffix} ]; then
   let PRIORITY=PRIORITY-1
@@ -669,7 +664,6 @@ exit 0
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/java
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/%{alt_java_name}
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/keytool
-%{_jvmdir}/%{sdkdir -- %{?1}}/bin/rmid
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/rmiregistry
 %dir %{_jvmdir}/%{sdkdir -- %{?1}}/lib
 %ifarch %{jit_arches}
@@ -715,6 +709,10 @@ exit 0
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/libsaproc.so
 %endif
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/libsctp.so
+%ifarch %{svml_arches}
+%{_jvmdir}/%{sdkdir -- %{?1}}/lib/libsvml.so
+%endif
+%{_jvmdir}/%{sdkdir -- %{?1}}/lib/libsyslookup.so
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/libverify.so
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/libzip.so
 %dir %{_jvmdir}/%{sdkdir -- %{?1}}/lib/jfr
@@ -723,7 +721,6 @@ exit 0
 %{_mandir}/man1/java-%{uniquesuffix -- %{?1}}.1*
 %{_mandir}/man1/%{alt_java_name}-%{uniquesuffix -- %{?1}}.1*
 %{_mandir}/man1/keytool-%{uniquesuffix -- %{?1}}.1*
-%{_mandir}/man1/rmid-%{uniquesuffix -- %{?1}}.1*
 %{_mandir}/man1/rmiregistry-%{uniquesuffix -- %{?1}}.1*
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/server/
 %ifarch %{share_arches}
@@ -742,7 +739,7 @@ exit 0
 %dir %{etcjavadir -- %{?1}}/conf/security/policy/limited
 %dir %{etcjavadir -- %{?1}}/conf/security/policy/unlimited
 %config(noreplace) %{etcjavadir -- %{?1}}/lib/security/default.policy
-%config(noreplace) %{etcjavadir -- %{?1}}/lib/security/blacklisted.certs
+%config(noreplace) %{etcjavadir -- %{?1}}/lib/security/blocked.certs
 %config(noreplace) %{etcjavadir -- %{?1}}/lib/security/public_suffix_list.dat
 %config(noreplace) %{etcjavadir -- %{?1}}/conf/security/policy/limited/exempt_local.policy
 %config(noreplace) %{etcjavadir -- %{?1}}/conf/security/policy/limited/default_local.policy
@@ -754,9 +751,8 @@ exit 0
 %config(noreplace) %{etcjavadir -- %{?1}}/conf/security/java.security
 %config(noreplace) %{etcjavadir -- %{?1}}/conf/logging.properties
 %config(noreplace) %{etcjavadir -- %{?1}}/conf/security/nss.cfg
-%config(noreplace) %{etcjavadir -- %{?1}}/conf/security/nss.fips.cfg
 %config(noreplace) %{etcjavadir -- %{?1}}/conf/management/jmxremote.access
-# this is conifg template, thus not config-noreplace
+# these are config templates, thus not config-noreplace
 %config  %{etcjavadir -- %{?1}}/conf/management/jmxremote.password.template
 %config  %{etcjavadir -- %{?1}}/conf/sdp/sdp.conf.template
 %config(noreplace) %{etcjavadir -- %{?1}}/conf/management/management.properties
@@ -812,9 +808,6 @@ exit 0
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/jstat
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/jstatd
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/serialver
-%ifarch %{aot_arches}
-%{_jvmdir}/%{sdkdir -- %{?1}}/bin/jaotc
-%endif
 %{_jvmdir}/%{sdkdir -- %{?1}}/include
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/ct.sym
 %if %{with_systemtap}
@@ -844,9 +837,6 @@ exit 0
 %{_mandir}/man1/jmod-%{uniquesuffix -- %{?1}}.1.gz
 %{_mandir}/man1/jshell-%{uniquesuffix -- %{?1}}.1.gz
 %{_mandir}/man1/jfr-%{uniquesuffix -- %{?1}}.1.gz
-%ifarch %{aot_arches}
-%{_mandir}/man1/jaotc-%{uniquesuffix -- %{?1}}.1.gz
-%endif
 
 %if %{with_systemtap}
 %dir %{tapsetroot}
@@ -859,7 +849,6 @@ exit 0
 %ghost %{_bindir}/javac
 %ghost %{_jvmdir}/java
 %ghost %{_jvmdir}/%{alt_java_name}
-%ghost %{_bindir}/jaotc
 %ghost %{_bindir}/jlink
 %ghost %{_bindir}/jmod
 %ghost %{_bindir}/jhsdb
@@ -977,8 +966,6 @@ OrderWithRequires: copy-jdk-configs
 %endif
 # for printing support
 Requires: cups-libs
-# for FIPS PKCS11 provider
-Requires: nss
 # Post requires alternatives to install tool alternatives
 Requires(post):   %{alternatives_requires}
 # Postun requires alternatives to uninstall tool alternatives
@@ -1120,7 +1107,7 @@ URL:      http://openjdk.java.net/
 
 # to regenerate source0 (jdk) run update_package.sh
 # update_package.sh contains hard-coded repos, revisions, tags, and projects to regenerate the source archives
-Source0: openjdk-jdk%{featurever}u-jdk-%{filever}+%{buildver}%{?tagsuffix:-%{tagsuffix}}.tar.xz
+Source0: openjdk-jdk%{featurever}-jdk-%{filever}+%{buildver}%{?tagsuffix:-%{tagsuffix}}.tar.xz
 #Source0: openjdk-jdk%{featurever}-jdk-%{filever}+%{buildver}.tar.xz
 
 # Use 'icedtea_sync.sh' to update the following
@@ -1146,11 +1133,8 @@ Source13: TestCryptoLevel.java
 # Ensure ECDSA is working
 Source14: TestECDSA.java
 
-# nss fips configuration file
-Source15: nss.fips.cfg.in
-
 # Verify system crypto (policy) can be disabled via a property
-Source17: TestSecurityProperties.java
+Source15: TestSecurityProperties.java
 
 ############################################
 #
@@ -1158,30 +1142,23 @@ Source17: TestSecurityProperties.java
 #
 ############################################
 
+# NSS via SunPKCS11 Provider (disabled comment
+# due to memory leak).
+Patch1000: rh1648249-add_commented_out_nss_cfg_provider_to_java_security.patch
+# enable build of speculative store bypass hardened alt-java
+Patch600: rh1750419-redhat_alt_java.patch
+
 # Ignore AWTError when assistive technologies are loaded
 Patch1:    rh1648242-accessible_toolkit_crash_do_not_break_jvm.patch
 # Restrict access to java-atk-wrapper classes
 Patch2:    rh1648644-java_access_bridge_privileged_security.patch
-# NSS via SunPKCS11 Provider (disabled due to memory leak).
-Patch1000: rh1648249-add_commented_out_nss_cfg_provider_to_java_security.patch
-# enable build of speculative store bypass hardened alt-java
-Patch600: rh1750419-redhat_alt_java.patch
 Patch3:    rh649512-remove_uses_of_far_in_jpeg_libjpeg_turbo_1_4_compat_for_jdk10_and_up.patch
 # Follow system wide crypto policy RHBZ#1249083
 Patch4:    pr3183-rh1340845-support_fedora_rhel_system_crypto_policy.patch
+# PR3695: Allow use of system crypto policy to be disabled by the user
+Patch5:    pr3695-toggle_system_crypto_policy.patch
 # Depend on pcs-lite-libs instead of pcs-lite-devel as this is only in optional repo
 Patch6: rh1684077-openjdk_should_depend_on_pcsc-lite-libs_instead_of_pcsc-lite-devel.patch
-Patch7: pr3695-toggle_system_crypto_policy.patch
-
-# FIPS support patches
-# RH1655466: Support RHEL FIPS mode using SunPKCS11 provider
-Patch1001: rh1655466-global_crypto_and_fips.patch
-# RH1818909: No ciphersuites availale for SSLSocket in FIPS mode
-Patch1002: rh1818909-fips_default_keystore_type.patch
-# RH1860986: Disable TLSv1.3 with the NSS-FIPS provider until PKCS#11 v3.0 support is available
-Patch1004: rh1860986-disable_tlsv1.3_in_fips_mode.patch
-# RH1915071: Always initialise JavaSecuritySystemConfiguratorAccess
-Patch1007: rh1915071-always_initialise_configurator_access.patch
 
 #############################################
 #
@@ -1515,10 +1492,6 @@ if [ %{include_debug_build} -eq 0 -a  %{include_normal_build} -eq 0 -a  %{includ
   echo "You have disabled all builds (normal,fastdebug,slowdebug). That is a no go."
   exit 14
 fi
-if [ %{include_normal_build} -eq 0 ] ; then
-  echo "You have disabled the normal build, but this is required to provide docs for the debug build."
-  exit 15
-fi
 %setup -q -c -n %{uniquesuffix ""} -T -a 0
 # https://bugzilla.redhat.com/show_bug.cgi?id=1189084
 prioritylength=`expr length %{priority}`
@@ -1537,16 +1510,12 @@ pushd %{top_level_dir_name}
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
+%patch5 -p1
 %patch6 -p1
-%patch7 -p1
 popd # openjdk
 
 %patch1000
 %patch600
-%patch1001
-%patch1002
-%patch1004
-%patch1007
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
@@ -1595,9 +1564,6 @@ done
 # Setup nss.cfg
 sed -e "s:@NSS_LIBDIR@:%{NSS_LIBDIR}:g" %{SOURCE11} > nss.cfg
 
-# Setup nss.fips.cfg
-sed -e "s:@NSS_LIBDIR@:%{NSS_LIBDIR}:g" %{SOURCE15} > nss.fips.cfg
-sed -i -e "s:@NSS_SECMOD@:/etc/pki/nssdb:g" nss.fips.cfg
 
 %build
 # How many CPU's do we have?
@@ -1665,7 +1631,7 @@ top_dir_abs_build_path=$(pwd)/%{buildoutputdir -- ${suffix}${loop}}
 # default pre-version supplied there (despite
 # what the file claims), so we pass it manually
 # to configure
-VERSION_FILE=${top_dir_abs_src_path}/make/autoconf/version-numbers
+VERSION_FILE=${top_dir_abs_src_path}/make/conf/version-numbers.conf
 if [ -f ${VERSION_FILE} ] ; then
     EA_DESIGNATOR=$(grep '^DEFAULT_PROMOTED_VERSION_PRE' ${VERSION_FILE} | cut -d '=' -f 2)
 else
@@ -1718,7 +1684,6 @@ bash ${top_dir_abs_src_path}/configure \
     --disable-warnings-as-errors
 
 make \
-    JAVAC_FLAGS=-g \
     LOG=trace \
     WARNINGS_ARE_ERRORS="-Wno-error" \
     CFLAGS_WARNINGS_ARE_ERRORS="-Wno-error" \
@@ -1752,9 +1717,6 @@ export JAVA_HOME=${top_dir_abs_main_build_path}/images/%{jdkimage}
 # Install nss.cfg right away as we will be using the JRE above
 install -m 644 nss.cfg $JAVA_HOME/conf/security/
 
-# Install nss.fips.cfg: NSS configuration for global FIPS mode (crypto-policies)
-install -m 644 nss.fips.cfg $JAVA_HOME/conf/security/
-
 # Use system-wide tzdata
 rm $JAVA_HOME/lib/tzdb.dat
 ln -s %{_datadir}/javazi-1.8/tzdb.dat $JAVA_HOME/lib/tzdb.dat
@@ -1772,7 +1734,7 @@ done # end of release / debug cycle loop
 %check
 
 # We test debug first as it will give better diagnostics on a crash
-for suffix in %{rev_build_loop} ; do
+for suffix in %{build_loop} ; do
 
 top_dir_abs_main_build_path=$(pwd)/%{buildoutputdir -- ${suffix}%{main_suffix}}
 %if %{include_staticlibs}
@@ -1795,8 +1757,8 @@ $JAVA_HOME/bin/javac -d . %{SOURCE14}
 $JAVA_HOME/bin/java $(echo $(basename %{SOURCE14})|sed "s|\.java||")
 
 # Check system crypto (policy) can be disabled
-$JAVA_HOME/bin/javac -d . %{SOURCE17}
-$JAVA_HOME/bin/java -Djava.security.disableSystemPropertiesFile=true $(echo $(basename %{SOURCE17})|sed "s|\.java||") ||  echo "crypto policy are now not honored i jdk15"
+$JAVA_HOME/bin/javac -d . %{SOURCE15}
+$JAVA_HOME/bin/java -Djava.security.disableSystemPropertiesFile=true $(echo $(basename %{SOURCE15})|sed "s|\.java||")
 
 # Check java launcher has no SSB mitigation
 if ! nm $JAVA_HOME/bin/java | grep set_speculation ; then true ; else false; fi
@@ -1822,6 +1784,14 @@ do
     echo "Testing $lib for debug symbols"
     # All these tests rely on RPM failing the build if the exit code of any set
     # of piped commands is non-zero.
+
+    # If this is the empty library, libsyslookup.so, of the foreign function and memory
+    # API incubation module (JEP 412), skip the debuginfo check as this seems unreliable
+    # on s390x. It's not very useful for other arches either, so skip unconditionally.
+    if [ "`basename $lib`" = "libsyslookup.so" ]; then
+       echo "Skipping debuginfo check for empty library 'libsyslookup.so'"
+       continue
+    fi
 
     # Test for .debug_* sections in the shared object. This is the main test
     # Stripped objects will not contain these
@@ -2086,6 +2056,9 @@ cjc.mainProgram(args)
 %posttrans
 %{posttrans_script %{nil}}
 
+%posttrans headless
+%{alternatives_java_install %{nil}}
+
 %post devel
 %{post_devel %{nil}}
 
@@ -2095,14 +2068,14 @@ cjc.mainProgram(args)
 %posttrans  devel
 %{posttrans_devel %{nil}}
 
-%post javadoc
-%{post_javadoc %{nil}}
+%posttrans javadoc
+%{alternatives_javadoc_install %{nil}}
 
 %postun javadoc
 %{postun_javadoc %{nil}}
 
-%post javadoc-zip
-%{post_javadoc_zip %{nil}}
+%posttrans javadoc-zip
+%{alternatives_javadoczip_install %{nil}}
 
 %postun javadoc-zip
 %{postun_javadoc_zip %{nil}}
@@ -2114,6 +2087,9 @@ cjc.mainProgram(args)
 
 %post headless-slowdebug
 %{post_headless -- %{debug_suffix_unquoted}}
+
+%posttrans headless-slowdebug
+%{alternatives_java_install -- %{debug_suffix_unquoted}}
 
 %postun slowdebug
 %{postun_script -- %{debug_suffix_unquoted}}
@@ -2149,6 +2125,9 @@ cjc.mainProgram(args)
 
 %posttrans fastdebug
 %{posttrans_script -- %{fastdebug_suffix_unquoted}}
+
+%posttrans headless-fastdebug
+%{alternatives_java_install -- %{fastdebug_suffix_unquoted}}
 
 %post devel-fastdebug
 %{post_devel -- %{fastdebug_suffix_unquoted}}
@@ -2256,23 +2235,49 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
-* Fri Jul 23 2021 Jiri Vanek <jvanek@redhat.com> - 1:16.0.2.0.7-1.rolling
-- bumped to security update of 16.0.2-ga
+* Mon Aug 30 2021 Jiri Vanek <jvanek@redhat.com> - 1:17.0.0.0.33-0.1.ea.rolling
+- alternatives creation moved to posttrans
+- Thus fixing the old reisntall issue:
+- https://bugzilla.redhat.com/show_bug.cgi?id=1200302
+- https://bugzilla.redhat.com/show_bug.cgi?id=1976053
 
-* Tue Jun 29 2021 Jiri Vanek <jvanek@redhat.com> - 1:16.0.1.0.9-5.rolling
-- renamed source15 to source17 to match el8
-- added fips support:
-- added pr3695-toggle_system_crypto_policy.patch ; missing prerequisity
-- removed rh1655466-global_crypto_and_fips.patch; jdk16 do not have default algorithm, it throws exception
-- adapted rh1655466-global_crypto_and_fips.patch
-- adapted rh1860986-disable_tlsv1.3_in_fips_mode.patch (?)
-- adapted rh1915071-always_initialise_configurator_access.patch
+* Fri Jul 30 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.33-0.0.ea.rolling
+- Update to jdk-17+33, including JDWP fix and July 2021 CPU
+- Resolves: rhbz#1972529
 
-* Thu Jun 17 2021 Petra Alice Mikova <pmikova@redhat.com> - 1:16.0.1.0.9-4.rolling
+* Thu Jul 22 2021 Fedora Release Engineering <releng@fedoraproject.org> - 1:17.0.0.0.26-0.4.ea.rolling.1
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_35_Mass_Rebuild
+
+* Fri Jul 02 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.26-0.4.ea.rolling
+- Use the "reverse" build loop (debug first) as the main and only build loop to get more diagnostics.
+- Remove restriction on disabling product build, as debug packages no longer have javadoc packages.
+
+* Mon Jun 28 2021 Petra Alice Mikova <pmikova@redhat.com> - 1:17.0.0.0.26-0.3.ea.rolling
 - fix patch rh1648249-add_commented_out_nss_cfg_provider_to_java_security.patch which made the SunPKCS provider show up again
 - Resolves: rhbz#1971120
 
-* Fri May 07 2021 Jiri Vanek <jvanek@redhat.com> - 1:16.0.1.0.9-3.rolling
+* Thu Jun 24 2021 Severin Gehwolf <sgehwolf@redhat.com> - 1:17.0.0.0.26-0.2.ea.rolling
+- Re-enable TestSecurityProperties after inclusion of PR3695
+
+* Thu Jun 24 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.26-0.2.ea.rolling
+- Add PR3695 to allow the system crypto policy to be turned off
+
+* Thu Jun 24 2021 Severin Gehwolf <sgehwolf@redhat.com> - 1:17.0.0.0.26-0.1.ea.rolling
+- Update buildjdkver to 17 so as to build with itself
+
+* Fri Jun 11 2021 Petra Alice Mikova <pmikova@redhat.com> - 1:17.0.0.0.26-0.0.ea.rolling
+- update sources to jdk 17.0.0+26
+- set is_ga to 0, as this is early access build
+- change vendor_version_string
+- change path to the version-numbers.conf
+- removed rmid binary from files and from slaves
+- removed JAVAC_FLAGS=-g from make command, as it breaks the build since JDK-8258407
+- add lib/libsyslookup.so to files
+- renamed lib/security/blacklisted.certs to lib/security/blocked.certs
+- add lib/libsvml.so for intel
+- skip debuginfo check for libsyslookup.so on s390x
+
+* Fri May 07 2021 Jiri Vanek <jvanek@redhat.com> -1:16.0.1.0.9-3.rolling
 - removed cjc backward comaptiblity, to fix when both rpm 4.16 and 4.17 are in transaction
 
 * Thu Apr 29 2021 Jiri Vanek <jvanek@redhat.com> -  1:16.0.1.0.9-2.rolling
