@@ -276,7 +276,7 @@
 %global interimver 0
 %global updatever 0
 %global patchver 0
-# If you bump featurever, you must bump also vendor_version_string
+# If you bump featurever, you must also bump vendor_version_string
 # Used via new version scheme. JDK 17 was
 # GA'ed in September 2021 => 21.9
 %global vendor_version_string 21.9
@@ -297,7 +297,7 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        33
+%global buildver        35
 %global rpmrelease      1
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
@@ -321,7 +321,7 @@
 # Release will be (where N is usually a number starting at 1):
 # - 0.N%%{?extraver}%%{?dist} for EA releases,
 # - N%%{?extraver}{?dist} for GA releases
-%global is_ga           0
+%global is_ga           1
 %if %{is_ga}
 %global build_type GA
 %global expected_ea_designator ""
@@ -370,7 +370,7 @@
 # fix for https://bugzilla.redhat.com/show_bug.cgi?id=1111349
 #         https://bugzilla.redhat.com/show_bug.cgi?id=1590796#c14
 #         https://bugzilla.redhat.com/show_bug.cgi?id=1655938
-%global _privatelibs libsplashscreen[.]so.*|libawt_xawt[.]so.*|libjli[.]so.*|libattach[.]so.*|libawt[.]so.*|libextnet[.]so.*|libawt_headless[.]so.*|libdt_socket[.]so.*|libfontmanager[.]so.*|libinstrument[.]so.*|libj2gss[.]so.*|libj2pcsc[.]so.*|libj2pkcs11[.]so.*|libjaas[.]so.*|libjavajpeg[.]so.*|libjdwp[.]so.*|libjimage[.]so.*|libjsound[.]so.*|liblcms[.]so.*|libmanagement[.]so.*|libmanagement_agent[.]so.*|libmanagement_ext[.]so.*|libmlib_image[.]so.*|libnet[.]so.*|libnio[.]so.*|libprefs[.]so.*|librmi[.]so.*|libsaproc[.]so.*|libsctp[.]so.*|libzip[.]so.*
+%global _privatelibs libsplashscreen[.]so.*|libawt_xawt[.]so.*|libjli[.]so.*|libattach[.]so.*|libawt[.]so.*|libextnet[.]so.*|libawt_headless[.]so.*|libdt_socket[.]so.*|libfontmanager[.]so.*|libinstrument[.]so.*|libj2gss[.]so.*|libj2pcsc[.]so.*|libj2pkcs11[.]so.*|libjaas[.]so.*|libjavajpeg[.]so.*|libjdwp[.]so.*|libjimage[.]so.*|libjsound[.]so.*|liblcms[.]so.*|libmanagement[.]so.*|libmanagement_agent[.]so.*|libmanagement_ext[.]so.*|libmlib_image[.]so.*|libnet[.]so.*|libnio[.]so.*|libprefs[.]so.*|librmi[.]so.*|libsaproc[.]so.*|libsctp[.]so.*|libsystemconf[.]so.*|libzip[.]so.*
 %global _publiclibs libjawt[.]so.*|libjava[.]so.*|libjvm[.]so.*|libverify[.]so.*|libjsig[.]so.*
 %if %is_system_jdk
 %global __provides_exclude ^(%{_privatelibs})$
@@ -709,6 +709,7 @@ exit 0
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/libsaproc.so
 %endif
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/libsctp.so
+%{_jvmdir}/%{sdkdir -- %{?1}}/lib/libsystemconf.so
 %ifarch %{svml_arches}
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/libsvml.so
 %endif
@@ -751,6 +752,7 @@ exit 0
 %config(noreplace) %{etcjavadir -- %{?1}}/conf/security/java.security
 %config(noreplace) %{etcjavadir -- %{?1}}/conf/logging.properties
 %config(noreplace) %{etcjavadir -- %{?1}}/conf/security/nss.cfg
+%config(noreplace) %{etcjavadir -- %{?1}}/conf/security/nss.fips.cfg
 %config(noreplace) %{etcjavadir -- %{?1}}/conf/management/jmxremote.access
 # these are config templates, thus not config-noreplace
 %config  %{etcjavadir -- %{?1}}/conf/management/jmxremote.password.template
@@ -1136,6 +1138,9 @@ Source14: TestECDSA.java
 # Verify system crypto (policy) can be disabled via a property
 Source15: TestSecurityProperties.java
 
+# nss fips configuration file
+Source17: nss.fips.cfg.in
+
 ############################################
 #
 # RPM/distribution specific patches
@@ -1159,6 +1164,18 @@ Patch4:    pr3183-rh1340845-support_fedora_rhel_system_crypto_policy.patch
 Patch5:    pr3695-toggle_system_crypto_policy.patch
 # Depend on pcs-lite-libs instead of pcs-lite-devel as this is only in optional repo
 Patch6: rh1684077-openjdk_should_depend_on_pcsc-lite-libs_instead_of_pcsc-lite-devel.patch
+
+# FIPS support patches
+# RH1655466: Support RHEL FIPS mode using SunPKCS11 provider
+Patch1001: rh1655466-global_crypto_and_fips.patch
+# RH1818909: No ciphersuites availale for SSLSocket in FIPS mode
+Patch1002: rh1818909-fips_default_keystore_type.patch
+# RH1860986: Disable TLSv1.3 with the NSS-FIPS provider until PKCS#11 v3.0 support is available
+Patch1004: rh1860986-disable_tlsv1.3_in_fips_mode.patch
+# RH1915071: Always initialise JavaSecuritySystemConfiguratorAccess
+Patch1007: rh1915071-always_initialise_configurator_access.patch
+# RH1929465: Improve system FIPS detection
+Patch1008: rh1929465-improve_system_FIPS_detection.patch
 
 #############################################
 #
@@ -1192,8 +1209,8 @@ BuildRequires: libXrandr-devel
 BuildRequires: libXrender-devel
 BuildRequires: libXt-devel
 BuildRequires: libXtst-devel
-# Requirements for setting up the nss.cfg
-BuildRequires: nss-devel
+# Requirements for setting up the nss.cfg and FIPS support
+BuildRequires: nss-devel >= 3.53
 BuildRequires: pkgconfig
 BuildRequires: xorg-x11-proto-devel
 BuildRequires: zip
@@ -1516,6 +1533,11 @@ popd # openjdk
 
 %patch1000
 %patch600
+%patch1001
+%patch1002
+%patch1004
+%patch1007
+%patch1008
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
@@ -1564,6 +1586,9 @@ done
 # Setup nss.cfg
 sed -e "s:@NSS_LIBDIR@:%{NSS_LIBDIR}:g" %{SOURCE11} > nss.cfg
 
+# Setup nss.fips.cfg
+sed -e "s:@NSS_LIBDIR@:%{NSS_LIBDIR}:g" %{SOURCE17} > nss.fips.cfg
+sed -i -e "s:@NSS_SECMOD@:/etc/pki/nssdb:g" nss.fips.cfg
 
 %build
 # How many CPU's do we have?
@@ -1664,6 +1689,7 @@ bash ${top_dir_abs_src_path}/configure \
     --with-boot-jdk=/usr/lib/jvm/java-%{buildjdkver}-openjdk \
     --with-debug-level=$debugbuild \
     --with-native-debug-symbols=internal \
+    --enable-sysconf-nss \
     --enable-unlimited-crypto \
     --with-zlib=system \
     --with-libjpeg=${link_opt} \
@@ -1716,6 +1742,9 @@ export JAVA_HOME=${top_dir_abs_main_build_path}/images/%{jdkimage}
 
 # Install nss.cfg right away as we will be using the JRE above
 install -m 644 nss.cfg $JAVA_HOME/conf/security/
+
+# Install nss.fips.cfg: NSS configuration for global FIPS mode (crypto-policies)
+install -m 644 nss.fips.cfg $JAVA_HOME/conf/security/
 
 # Use system-wide tzdata
 rm $JAVA_HOME/lib/tzdb.dat
@@ -2235,6 +2264,26 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Tue Sep 14 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.35-1.rolling
+- Update to jdk-17+35, also known as jdk-17-ga.
+- Switch to GA mode.
+- Update RH1655466 FIPS patch with changes in OpenJDK 8 version.
+- SunPKCS11 runtime provider name is a concatenation of "SunPKCS11-" and the name in the config file.
+- Change nss.fips.cfg config name to "NSS-FIPS" to avoid confusion with nss.cfg.
+- No need to substitute path to nss.fips.cfg as java.security file supports a java.home variable.
+- Disable FIPS mode support unless com.redhat.fips is set to "true".
+- Enable alignment with FIPS crypto policy by default (-Dcom.redhat.fips=false to disable).
+- Add explicit runtime dependency on NSS for the PKCS11 provider in FIPS mode
+- Move setup of JavaSecuritySystemConfiguratorAccess to Security class so it always occurs (RH1915071)
+- Minor code cleanups on FIPS detection patch and check for SECMOD_GetSystemFIPSEnabled in configure.
+- Remove unneeded Requires on NSS as it will now be dynamically linked and detected by RPM.
+
+* Tue Sep 14 2021 Martin Balao <mbalao@redhat.com> - 1:17.0.0.0.35-1.rolling
+- Support the FIPS mode crypto policy (RH1655466)
+- Use appropriate keystore types when in FIPS mode (RH1818909)
+- Disable TLSv1.3 when the FIPS crypto policy and the NSS-FIPS provider are in use (RH1860986)
+- Detect FIPS using SECMOD_GetSystemFIPSEnabled in the new libsystemconf JDK library.
+
 * Mon Aug 30 2021 Jiri Vanek <jvanek@redhat.com> - 1:17.0.0.0.33-0.1.ea.rolling
 - alternatives creation moved to posttrans
 - Thus fixing the old reisntall issue:
