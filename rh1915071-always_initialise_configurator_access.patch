@@ -1,15 +1,16 @@
-diff --git openjdk.orig/src/java.base/share/classes/java/security/Security.java openjdk/src/java.base/share/classes/java/security/Security.java
---- openjdk.orig/src/java.base/share/classes/java/security/Security.java
+diff --git openjdk/src/java.base/share/classes/java/security/Security.java openjdk/src/java.base/share/classes/java/security/Security.java
+index f1633afb627..ce32c939253 100644
+--- openjdk/src/java.base/share/classes/java/security/Security.java
 +++ openjdk/src/java.base/share/classes/java/security/Security.java
-@@ -32,6 +32,7 @@
+@@ -32,6 +32,7 @@ import java.net.URL;
  
  import jdk.internal.event.EventHelper;
  import jdk.internal.event.SecurityPropertyModificationEvent;
-+import jdk.internal.misc.JavaSecuritySystemConfiguratorAccess;
++import jdk.internal.access.JavaSecuritySystemConfiguratorAccess;
  import jdk.internal.access.SharedSecrets;
  import jdk.internal.util.StaticProperty;
  import sun.security.util.Debug;
-@@ -74,6 +75,15 @@
+@@ -74,6 +75,15 @@ public final class Security {
      }
  
      static {
@@ -25,7 +26,7 @@ diff --git openjdk.orig/src/java.base/share/classes/java/security/Security.java 
          // doPrivileged here because there are multiple
          // things in initialize that might require privs.
          // (the FileInputStream call and the File.exists call,
-@@ -193,9 +203,8 @@
+@@ -194,9 +204,8 @@ public final class Security {
          }
  
          String disableSystemProps = System.getProperty("java.security.disableSystemPropertiesFile");
@@ -37,19 +38,20 @@ diff --git openjdk.orig/src/java.base/share/classes/java/security/Security.java 
              if (SystemConfigurator.configure(props)) {
                  loadedProps = true;
              }
-diff --git openjdk.orig/src/java.base/share/classes/java/security/SystemConfigurator.java openjdk/src/java.base/share/classes/java/security/SystemConfigurator.java
---- openjdk.orig/src/java.base/share/classes/java/security/SystemConfigurator.java
+diff --git openjdk/src/java.base/share/classes/java/security/SystemConfigurator.java openjdk/src/java.base/share/classes/java/security/SystemConfigurator.java
+index 60fa75cab45..10b54aa4ce4 100644
+--- openjdk/src/java.base/share/classes/java/security/SystemConfigurator.java
 +++ openjdk/src/java.base/share/classes/java/security/SystemConfigurator.java
-@@ -38,8 +38,6 @@
+@@ -38,8 +38,6 @@ import java.util.Map.Entry;
  import java.util.Properties;
  import java.util.regex.Pattern;
  
--import jdk.internal.misc.SharedSecrets;
--import jdk.internal.misc.JavaSecuritySystemConfiguratorAccess;
+-import jdk.internal.access.JavaSecuritySystemConfiguratorAccess;
+-import jdk.internal.access.SharedSecrets;
  import sun.security.util.Debug;
  
  /**
-@@ -65,16 +63,6 @@
+@@ -65,16 +63,6 @@ final class SystemConfigurator {
  
      private static boolean systemFipsEnabled = false;
  
@@ -66,3 +68,4 @@ diff --git openjdk.orig/src/java.base/share/classes/java/security/SystemConfigur
      /*
       * Invoked when java.security.Security class is initialized, if
       * java.security.disableSystemPropertiesFile property is not set and
+

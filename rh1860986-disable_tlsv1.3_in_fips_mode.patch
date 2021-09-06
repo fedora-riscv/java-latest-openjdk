@@ -1,6 +1,7 @@
-diff -r bbc65dfa59d1 src/java.base/share/classes/java/security/SystemConfigurator.java
---- openjdk/src/java.base/share/classes/java/security/SystemConfigurator.java	Thu Jan 23 18:22:31 2020 -0300
-+++ openjdk/src/java.base/share/classes/java/security/SystemConfigurator.java	Sat Aug 01 23:16:51 2020 -0300
+diff --git openjdk/src/java.base/share/classes/java/security/SystemConfigurator.java openjdk/src/java.base/share/classes/java/security/SystemConfigurator.java
+index f9baf8c9742..60fa75cab45 100644
+--- openjdk/src/java.base/share/classes/java/security/SystemConfigurator.java
++++ openjdk/src/java.base/share/classes/java/security/SystemConfigurator.java
 @@ -1,11 +1,13 @@
  /*
 - * Copyright (c) 2019, Red Hat, Inc.
@@ -17,7 +18,7 @@ diff -r bbc65dfa59d1 src/java.base/share/classes/java/security/SystemConfigurato
   *
   * This code is distributed in the hope that it will be useful, but WITHOUT
   * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-@@ -34,10 +36,10 @@
+@@ -34,10 +36,10 @@ import java.nio.file.Path;
  import java.util.Iterator;
  import java.util.Map.Entry;
  import java.util.Properties;
@@ -25,12 +26,12 @@ diff -r bbc65dfa59d1 src/java.base/share/classes/java/security/SystemConfigurato
 -import java.util.regex.Matcher;
  import java.util.regex.Pattern;
  
-+import jdk.internal.misc.SharedSecrets;
-+import jdk.internal.misc.JavaSecuritySystemConfiguratorAccess;
++import jdk.internal.access.JavaSecuritySystemConfiguratorAccess;
++import jdk.internal.access.SharedSecrets;
  import sun.security.util.Debug;
  
  /**
-@@ -47,7 +49,7 @@
+@@ -47,7 +49,7 @@ import sun.security.util.Debug;
   *
   */
  
@@ -39,7 +40,7 @@ diff -r bbc65dfa59d1 src/java.base/share/classes/java/security/SystemConfigurato
  
      private static final Debug sdebug =
              Debug.getInstance("properties");
-@@ -61,15 +63,16 @@
+@@ -61,15 +63,16 @@ class SystemConfigurator {
      private static final String CRYPTO_POLICIES_CONFIG =
              CRYPTO_POLICIES_BASE_DIR + "/config";
  
@@ -65,7 +66,7 @@ diff -r bbc65dfa59d1 src/java.base/share/classes/java/security/SystemConfigurato
      }
  
      /*
-@@ -128,9 +131,9 @@
+@@ -128,9 +131,9 @@ class SystemConfigurator {
                      String nonFipsKeystoreType = props.getProperty("keystore.type");
                      props.put("keystore.type", keystoreTypeValue);
                      if (keystoreTypeValue.equals("PKCS11")) {
@@ -78,7 +79,7 @@ diff -r bbc65dfa59d1 src/java.base/share/classes/java/security/SystemConfigurato
                      }
                      if (System.getProperty("javax.net.ssl.trustStoreType") == null) {
                          // If no trustStoreType has been set, use the
-@@ -144,12 +147,13 @@
+@@ -144,12 +147,13 @@ class SystemConfigurator {
                          sdebug.println("FIPS mode default keystore.type = " +
                                  keystoreTypeValue);
                          sdebug.println("FIPS mode javax.net.ssl.keyStore = " +
@@ -93,7 +94,7 @@ diff -r bbc65dfa59d1 src/java.base/share/classes/java/security/SystemConfigurato
              }
          } catch (Exception e) {
              if (sdebug != null) {
-@@ -160,13 +164,30 @@
+@@ -160,13 +164,30 @@ class SystemConfigurator {
          return loadedProps;
      }
  
@@ -126,9 +127,11 @@ diff -r bbc65dfa59d1 src/java.base/share/classes/java/security/SystemConfigurato
              String cryptoPoliciesConfig = new String(Files.readAllBytes(Path.of(CRYPTO_POLICIES_CONFIG)));
              if (sdebug != null) { sdebug.println("Crypto config:\n" + cryptoPoliciesConfig); }
              Pattern pattern = Pattern.compile("^FIPS$", Pattern.MULTILINE);
-diff -r bbc65dfa59d1 src/java.base/share/classes/jdk/internal/misc/JavaSecuritySystemConfiguratorAccess.java
---- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ openjdk/src/java.base/share/classes/jdk/internal/misc/JavaSecuritySystemConfiguratorAccess.java	Sat Aug 01 23:16:51 2020 -0300
+diff --git openjdk/src/java.base/share/classes/jdk/internal/access/JavaSecuritySystemConfiguratorAccess.java openjdk/src/java.base/share/classes/jdk/internal/access/JavaSecuritySystemConfiguratorAccess.java
+new file mode 100644
+index 00000000000..a31e93ec02e
+--- /dev/null
++++ openjdk/src/java.base/share/classes/jdk/internal/access/JavaSecuritySystemConfiguratorAccess.java
 @@ -0,0 +1,30 @@
 +/*
 + * Copyright (c) 2020, Red Hat, Inc.
@@ -155,31 +158,24 @@ diff -r bbc65dfa59d1 src/java.base/share/classes/jdk/internal/misc/JavaSecurityS
 + * questions.
 + */
 +
-+package jdk.internal.misc;
++package jdk.internal.access;
 +
 +public interface JavaSecuritySystemConfiguratorAccess {
 +    boolean isSystemFipsEnabled();
 +}
-diff -r bbc65dfa59d1 src/java.base/share/classes/jdk/internal/access/SharedSecrets.java
---- openjdk/src/java.base/share/classes/jdk/internal/access/SharedSecrets.java	Thu Jan 23 18:22:31 2020 -0300
-+++ openjdk/src/java.base/share/classes/jdk/internal/access/SharedSecrets.java	Sat Aug 01 23:16:51 2020 -0300
-@@ -38,6 +38,7 @@
- import java.io.RandomAccessFile;
- import java.security.ProtectionDomain;
- import java.security.Signature;
-+import jdk.internal.misc.JavaSecuritySystemConfiguratorAccess;
- 
- /** A repository of "shared secrets", which are a mechanism for
-     calling implementation-private methods in another package without
-@@ -76,6 +76,7 @@
-     private static JavaSecurityAccess javaSecurityAccess;
-     private static JavaSecuritySignatureAccess javaSecuritySignatureAccess;
+diff --git openjdk/src/java.base/share/classes/jdk/internal/access/SharedSecrets.java openjdk/src/java.base/share/classes/jdk/internal/access/SharedSecrets.java
+index f6d3638c3dd..5a2c9eb0c46 100644
+--- openjdk/src/java.base/share/classes/jdk/internal/access/SharedSecrets.java
++++ openjdk/src/java.base/share/classes/jdk/internal/access/SharedSecrets.java
+@@ -81,6 +81,7 @@ public class SharedSecrets {
+     private static JavaSecuritySpecAccess javaSecuritySpecAccess;
      private static JavaxCryptoSealedObjectAccess javaxCryptoSealedObjectAccess;
+     private static JavaxCryptoSpecAccess javaxCryptoSpecAccess;
 +    private static JavaSecuritySystemConfiguratorAccess javaSecuritySystemConfiguratorAccess;
  
      public static void setJavaUtilCollectionAccess(JavaUtilCollectionAccess juca) {
          javaUtilCollectionAccess = juca;
-@@ -361,4 +362,12 @@
+@@ -442,4 +443,12 @@ public class SharedSecrets {
              MethodHandles.lookup().ensureInitialized(c);
          } catch (IllegalAccessException e) {}
      }
@@ -192,10 +188,11 @@ diff -r bbc65dfa59d1 src/java.base/share/classes/jdk/internal/access/SharedSecre
 +        return javaSecuritySystemConfiguratorAccess;
 +    }
  }
-diff -r bbc65dfa59d1 src/java.base/share/classes/sun/security/ssl/SSLContextImpl.java
---- openjdk/src/java.base/share/classes/sun/security/ssl/SSLContextImpl.java	Thu Jan 23 18:22:31 2020 -0300
-+++ openjdk/src/java.base/share/classes/sun/security/ssl/SSLContextImpl.java	Sat Aug 01 23:16:51 2020 -0300
-@@ -31,6 +31,7 @@
+diff --git openjdk/src/java.base/share/classes/sun/security/ssl/SSLContextImpl.java openjdk/src/java.base/share/classes/sun/security/ssl/SSLContextImpl.java
+index 6ffdfeda18d..775b185fb06 100644
+--- openjdk/src/java.base/share/classes/sun/security/ssl/SSLContextImpl.java
++++ openjdk/src/java.base/share/classes/sun/security/ssl/SSLContextImpl.java
+@@ -32,6 +32,7 @@ import java.security.cert.*;
  import java.util.*;
  import java.util.concurrent.locks.ReentrantLock;
  import javax.net.ssl.*;
@@ -203,7 +200,7 @@ diff -r bbc65dfa59d1 src/java.base/share/classes/sun/security/ssl/SSLContextImpl
  import sun.security.action.GetPropertyAction;
  import sun.security.provider.certpath.AlgorithmChecker;
  import sun.security.validator.Validator;
-@@ -536,22 +536,42 @@
+@@ -536,22 +537,40 @@ public abstract class SSLContextImpl extends SSLContextSpi {
          private static final List<CipherSuite> serverDefaultCipherSuites;
  
          static {
@@ -223,80 +220,44 @@ diff -r bbc65dfa59d1 src/java.base/share/classes/sun/security/ssl/SSLContextImpl
 -                ProtocolVersion.TLS11,
 -                ProtocolVersion.TLS10
 -            });
-+              if (SharedSecrets.getJavaSecuritySystemConfiguratorAccess()
-+                      .isSystemFipsEnabled()) {
-+                  // RH1860986: TLSv1.3 key derivation not supported with
-+                  // the Security Providers available in system FIPS mode.
-+              supportedProtocols = Arrays.asList(
-+                  ProtocolVersion.TLS12,
-+                  ProtocolVersion.TLS11,
-+                  ProtocolVersion.TLS10,
-+                  ProtocolVersion.SSL30,
-+                  ProtocolVersion.SSL20Hello
-+              );
-+
-+              serverDefaultProtocols = getAvailableProtocols(
-+                      new ProtocolVersion[] {
-+                  ProtocolVersion.TLS12,
-+                  ProtocolVersion.TLS11,
-+                  ProtocolVersion.TLS10
-+              });
-+                } else {
-+              supportedProtocols = Arrays.asList(
-+                  ProtocolVersion.TLS13,
-+                  ProtocolVersion.TLS12,
-+                  ProtocolVersion.TLS11,
-+                  ProtocolVersion.TLS10,
-+                  ProtocolVersion.SSL30,
-+                  ProtocolVersion.SSL20Hello
-+              );
-+
-+              serverDefaultProtocols = getAvailableProtocols(
-+                      new ProtocolVersion[] {
-+                  ProtocolVersion.TLS13,
-+                  ProtocolVersion.TLS12,
-+                  ProtocolVersion.TLS11,
-+                  ProtocolVersion.TLS10
-+              });
-+            }
- 
-             supportedCipherSuites = getApplicableSupportedCipherSuites(
-                     supportedProtocols);
-@@ -699,13 +719,26 @@
-         private static final List<CipherSuite> clientDefaultCipherSuites;
- 
-         static {
--            clientDefaultProtocols = getAvailableProtocols(
--                    new ProtocolVersion[] {
--                ProtocolVersion.TLS13,
--                ProtocolVersion.TLS12,
--                ProtocolVersion.TLS11,
--                ProtocolVersion.TLS10
--            });
 +            if (SharedSecrets.getJavaSecuritySystemConfiguratorAccess()
 +                    .isSystemFipsEnabled()) {
 +                // RH1860986: TLSv1.3 key derivation not supported with
 +                // the Security Providers available in system FIPS mode.
-+              clientDefaultProtocols = getAvailableProtocols(
-+                      new ProtocolVersion[] {
-+                  ProtocolVersion.TLS12,
-+                  ProtocolVersion.TLS11,
-+                  ProtocolVersion.TLS10
-+              });
-+            } else {
-+              clientDefaultProtocols = getAvailableProtocols(
-+                      new ProtocolVersion[] {
-+                  ProtocolVersion.TLS13,
-+                  ProtocolVersion.TLS12,
-+                  ProtocolVersion.TLS11,
-+                  ProtocolVersion.TLS10
-+              });
-+            }
++                supportedProtocols = Arrays.asList(
++                    ProtocolVersion.TLS12,
++                    ProtocolVersion.TLS11,
++                    ProtocolVersion.TLS10
++                );
 +
++                serverDefaultProtocols = getAvailableProtocols(
++                        new ProtocolVersion[] {
++                    ProtocolVersion.TLS12,
++                    ProtocolVersion.TLS11,
++                    ProtocolVersion.TLS10
++                });
++            } else {
++                supportedProtocols = Arrays.asList(
++                    ProtocolVersion.TLS13,
++                    ProtocolVersion.TLS12,
++                    ProtocolVersion.TLS11,
++                    ProtocolVersion.TLS10,
++                    ProtocolVersion.SSL30,
++                    ProtocolVersion.SSL20Hello
++                );
++
++                serverDefaultProtocols = getAvailableProtocols(
++                        new ProtocolVersion[] {
++                    ProtocolVersion.TLS13,
++                    ProtocolVersion.TLS12,
++                    ProtocolVersion.TLS11,
++                    ProtocolVersion.TLS10
++                });
++            }
  
-             clientDefaultCipherSuites = getApplicableEnabledCipherSuites(
-                     clientDefaultProtocols, true);
-@@ -842,12 +875,21 @@
+             supportedCipherSuites = getApplicableSupportedCipherSuites(
+                     supportedProtocols);
+@@ -842,12 +861,23 @@ public abstract class SSLContextImpl extends SSLContextSpi {
              ProtocolVersion[] candidates;
              if (refactored.isEmpty()) {
                  // Client and server use the same default protocols.
@@ -306,28 +267,31 @@ diff -r bbc65dfa59d1 src/java.base/share/classes/sun/security/ssl/SSLContextImpl
 -                        ProtocolVersion.TLS11,
 -                        ProtocolVersion.TLS10
 -                    };
-+              if (SharedSecrets.getJavaSecuritySystemConfiguratorAccess()
-+                      .isSystemFipsEnabled()) {
-+                 candidates = new ProtocolVersion[] {
-+                          ProtocolVersion.TLS12,
-+                          ProtocolVersion.TLS11,
-+                          ProtocolVersion.TLS10
-+                      };
-+              } else {
-+                  candidates = new ProtocolVersion[] {
-+                          ProtocolVersion.TLS13,
-+                          ProtocolVersion.TLS12,
-+                          ProtocolVersion.TLS11,
-+                          ProtocolVersion.TLS10
-+                      };
-+              }
++                if (SharedSecrets.getJavaSecuritySystemConfiguratorAccess()
++                        .isSystemFipsEnabled()) {
++                    // RH1860986: TLSv1.3 key derivation not supported with
++                    // the Security Providers available in system FIPS mode.
++                    candidates = new ProtocolVersion[] {
++                            ProtocolVersion.TLS12,
++                            ProtocolVersion.TLS11,
++                            ProtocolVersion.TLS10
++                        };
++                } else {
++                    candidates = new ProtocolVersion[] {
++                            ProtocolVersion.TLS13,
++                            ProtocolVersion.TLS12,
++                            ProtocolVersion.TLS11,
++                            ProtocolVersion.TLS10
++                        };
++                }
              } else {
                  // Use the customized TLS protocols.
                  candidates =
-diff -r bbc65dfa59d1 src/java.base/share/classes/sun/security/ssl/SunJSSE.java
---- openjdk/src/java.base/share/classes/sun/security/ssl/SunJSSE.java	Thu Jan 23 18:22:31 2020 -0300
-+++ openjdk/src/java.base/share/classes/sun/security/ssl/SunJSSE.java	Sat Aug 01 23:16:51 2020 -0300
-@@ -27,6 +27,8 @@
+diff --git openjdk/src/java.base/share/classes/sun/security/ssl/SunJSSE.java openjdk/src/java.base/share/classes/sun/security/ssl/SunJSSE.java
+index 894e26dfad8..8b16378b96b 100644
+--- openjdk/src/java.base/share/classes/sun/security/ssl/SunJSSE.java
++++ openjdk/src/java.base/share/classes/sun/security/ssl/SunJSSE.java
+@@ -27,6 +27,8 @@ package sun.security.ssl;
  
  import java.security.*;
  import java.util.*;
@@ -336,7 +300,7 @@ diff -r bbc65dfa59d1 src/java.base/share/classes/sun/security/ssl/SunJSSE.java
  import static sun.security.util.SecurityConstants.PROVIDER_VER;
  
  /**
-@@ -195,8 +197,13 @@
+@@ -102,8 +104,13 @@ public class SunJSSE extends java.security.Provider {
              "sun.security.ssl.SSLContextImpl$TLS11Context", null, null);
          ps("SSLContext", "TLSv1.2",
              "sun.security.ssl.SSLContextImpl$TLS12Context", null, null);
@@ -352,3 +316,4 @@ diff -r bbc65dfa59d1 src/java.base/share/classes/sun/security/ssl/SunJSSE.java
          ps("SSLContext", "TLS",
              "sun.security.ssl.SSLContextImpl$TLSContext",
              List.of("SSL"), null);
+
