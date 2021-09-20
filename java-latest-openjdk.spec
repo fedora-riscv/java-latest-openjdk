@@ -1135,11 +1135,8 @@ Source13: TestCryptoLevel.java
 # Ensure ECDSA is working
 Source14: TestECDSA.java
 
-# nss fips configuration file
-Source15: nss.fips.cfg.in
-
 # Verify system crypto (policy) can be disabled via a property
-Source17: TestSecurityProperties.java
+Source15: TestSecurityProperties.java
 
 # nss fips configuration file
 Source17: nss.fips.cfg.in
@@ -1165,17 +1162,6 @@ Patch4:    pr3183-rh1340845-support_fedora_rhel_system_crypto_policy.patch
 Patch5:    pr3695-toggle_system_crypto_policy.patch
 # Depend on pcs-lite-libs instead of pcs-lite-devel as this is only in optional repo
 Patch6: rh1684077-openjdk_should_depend_on_pcsc-lite-libs_instead_of_pcsc-lite-devel.patch
-Patch7: pr3695-toggle_system_crypto_policy.patch
-
-# FIPS support patches
-# RH1655466: Support RHEL FIPS mode using SunPKCS11 provider
-Patch1001: rh1655466-global_crypto_and_fips.patch
-# RH1818909: No ciphersuites availale for SSLSocket in FIPS mode
-Patch1002: rh1818909-fips_default_keystore_type.patch
-# RH1860986: Disable TLSv1.3 with the NSS-FIPS provider until PKCS#11 v3.0 support is available
-Patch1004: rh1860986-disable_tlsv1.3_in_fips_mode.patch
-# RH1915071: Always initialise JavaSecuritySystemConfiguratorAccess
-Patch1007: rh1915071-always_initialise_configurator_access.patch
 
 # FIPS support patches
 # RH1655466: Support RHEL FIPS mode using SunPKCS11 provider
@@ -1541,7 +1527,6 @@ pushd %{top_level_dir_name}
 %patch4 -p1
 %patch5 -p1
 %patch6 -p1
-%patch7 -p1
 popd # openjdk
 
 %patch1000
@@ -2312,14 +2297,14 @@ require "copy_jdk_configs.lua"
 - Update to jdk-17+33, including JDWP fix and July 2021 CPU
 - Resolves: rhbz#1972529
 
-* Fri Jul 02 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.26-0.4.ea.rolling
+* Sat Jul 24 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.26-0.4.ea.rolling
 - Use the "reverse" build loop (debug first) as the main and only build loop to get more diagnostics.
 - Remove restriction on disabling product build, as debug packages no longer have javadoc packages.
 
-* Thu Jun 24 2021 Severin Gehwolf <sgehwolf@redhat.com> - 1:17.0.0.0.26-0.2.ea.rolling
+* Sat Jul 24 2021 Severin Gehwolf <sgehwolf@redhat.com> - 1:17.0.0.0.26-0.2.ea.rolling
 - Re-enable TestSecurityProperties after inclusion of PR3695
 
-* Thu Jun 24 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.26-0.2.ea.rolling
+* Sat Jul 24 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.26-0.2.ea.rolling
 - Add PR3695 to allow the system crypto policy to be turned off
 
 * Sat Jul 24 2021 Petra Alice Mikova <pmikova@redhat.com> - 1:17.0.0.0.26-0.0.ea.rolling
