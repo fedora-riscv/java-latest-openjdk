@@ -258,7 +258,7 @@
 # buildjdkver is usually same as %%{featurever},
 # but in time of bootstrap of next jdk, it is featurever-1,
 # and this it is better to change it here, on single place
-%global buildjdkver 16
+%global buildjdkver 17
 # We don't add any LTS designator for STS packages (this package).
 # Neither for Fedora nor EPEL which would have %%{rhel} macro defined.
  %global lts_designator ""
@@ -2175,6 +2175,7 @@ require "copy_jdk_configs.lua"
 * Wed Oct 20 2021 Petra Alice Mikova <pmikova@redhat.com> - 1:17.0.1.0.12-1.rolling
 - October CPU update to jdk 17.0.1+12
 - dropped commented-out source line
+- bumped buildjdkver to 17
 
 * Mon Oct 11 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.35-3.rolling
 - Update release notes to document the major changes between OpenJDK 11 & 17.
