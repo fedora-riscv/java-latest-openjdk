@@ -298,7 +298,7 @@
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
 %global buildver        12
-%global rpmrelease      2
+%global rpmrelease      3
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 # Using 10 digits may overflow the int used for priority, so we combine the patch and build versions
@@ -1187,6 +1187,8 @@ Patch1013: rh1991003-enable_fips_keys_import.patch
 # OpenJDK patches in need of upstreaming
 #
 #############################################
+# JDK-8276572: Fake libsyslookup.so library causes tooling issues
+Patch2000: jdk8276572-fake_libsyslookup_causes_tooling_issues.patch
 
 
 BuildRequires: autoconf
@@ -1548,6 +1550,7 @@ popd # openjdk
 %patch1011
 %patch1012
 %patch1013
+%patch2000
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
@@ -1822,14 +1825,6 @@ do
     echo "Testing $lib for debug symbols"
     # All these tests rely on RPM failing the build if the exit code of any set
     # of piped commands is non-zero.
-
-    # If this is the empty library, libsyslookup.so, of the foreign function and memory
-    # API incubation module (JEP 412), skip the debuginfo check as this seems unreliable
-    # on s390x. It's not very useful for other arches either, so skip unconditionally.
-    if [ "`basename $lib`" = "libsyslookup.so" ]; then
-       echo "Skipping debuginfo check for empty library 'libsyslookup.so'"
-       continue
-    fi
 
     # Test for .debug_* sections in the shared object. This is the main test
     # Stripped objects will not contain these
@@ -2272,6 +2267,10 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Fri Nov 05 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.35-3.rolling
+- Patch syslookup.c so it actually has some code to be compiled into libsyslookup
+- Related: rhbz#2013846
+
 * Wed Nov 03 2021 Severin Gehwolf <sgehwolf@redhat.com> - 1:17.0.1.0.12-2.rolling
 - Use 'sql:' prefix in nss.fips.cfg as F35+ no longer ship the legacy
   secmod.db file as part of nss
