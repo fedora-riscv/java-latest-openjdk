@@ -1616,9 +1616,6 @@ export NUM_PROC=${NUM_PROC:-1}
 %ifarch s390x sparc64 alpha %{power64} %{aarch64}
 export ARCH_DATA_MODEL=64
 %endif
-%ifarch alpha
-export CFLAGS="$CFLAGS -mieee"
-%endif
 
 # We use ourcppflags because the OpenJDK build seems to
 # pass EXTRA_CFLAGS to the HotSpot C++ compiler...
@@ -1626,11 +1623,18 @@ export CFLAGS="$CFLAGS -mieee"
 EXTRA_CFLAGS="%ourcppflags"
 EXTRA_CPP_FLAGS="%ourcppflags"
 
+%ifarch alpha
+EXTRA_CFLAGS="$EXTRA_CFLAGS -mieee"
+%endif
 %ifarch %{power64} ppc
 # fix rpmlint warnings
 EXTRA_CFLAGS="$EXTRA_CFLAGS -fno-strict-aliasing"
 %endif
-export EXTRA_CFLAGS
+# workaround stap bug https://bugzilla.redhat.com/show_bug.cgi?id=2026858
+%ifarch %{arm}
+EXTRA_CPP_FLAGS="$EXTRA_CPP_FLAGS -DSTAP_SDT_ARG_CONSTRAINT=g"
+%endif
+export EXTRA_CFLAGS EXTRA_CPP_FLAGS
 
 for suffix in %{build_loop} ; do
 if [ "x$suffix" = "x" ] ; then
@@ -2278,6 +2282,10 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Mon Nov 29 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.1.0.12-3.rolling
+- Add -DSTAP_SDT_ARG_CONSTRAINT=g workaround on aarch32 to fix build
+- See https://bugzilla.redhat.com/show_bug.cgi?id=2026858
+
 * Mon Nov 29 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.1.0.12-3.rolling
 - Update tapsets from IcedTea 6.x repository with fix for JDK-8015774 changes (_heap->_heaps) and @JAVA_SPEC_VER@
 - Update icedtea_sync.sh with a VCS mode that retrieves sources from a Mercurial repository
