@@ -274,7 +274,7 @@
 # New Version-String scheme-style defines
 %global featurever 17
 %global interimver 0
-%global updatever 1
+%global updatever 2
 %global patchver 0
 # If you bump featurever, you must also bump vendor_version_string
 # Used via new version scheme. JDK 17 was
@@ -284,10 +284,15 @@
 # but in time of bootstrap of next jdk, it is featurever-1,
 # and this it is better to change it here, on single place
 %global buildjdkver 17
-# We don't add any LTS designator for STS packages (this package).
-# Neither for Fedora nor EPEL which would have %%{rhel} macro defined.
+# We don't add any LTS designator for STS packages (Fedora and EPEL).
+# We need to explicitly exclude EPEL as it would have the %%{rhel} macro defined.
+%if 0%{?rhel} && !0%{?epel}
+  %global lts_designator "LTS"
+  %global lts_designator_zip -%{lts_designator}
+%else
  %global lts_designator ""
  %global lts_designator_zip ""
+%endif
 
 # Define IcedTea version used for SystemTap tapsets and desktop file
 %global icedteaver      6.0.0pre00-c848b93a8598
@@ -297,8 +302,8 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        12
-%global rpmrelease      13
+%global buildver        8
+%global rpmrelease      1
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 # Using 10 digits may overflow the int used for priority, so we combine the patch and build versions
@@ -798,7 +803,7 @@ exit 0
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/libsctp.so
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/libsystemconf.so
 %ifarch %{svml_arches}
-%{_jvmdir}/%{sdkdir -- %{?1}}/lib/libsvml.so
+%{_jvmdir}/%{sdkdir -- %{?1}}/lib/libjsvml.so
 %endif
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/libsyslookup.so
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/libverify.so
@@ -1284,14 +1289,15 @@ Patch1010: rh1996182-login_to_nss_software_token.patch
 Patch1012: rh1996182-extend_security_policy.patch
 # RH1991003: Allow plain key import unless com.redhat.fips.plainKeySupport is set to false
 Patch1013: rh1991003-enable_fips_keys_import.patch
+# RH2021263: Resolve outstanding FIPS issues
+Patch1014: rh2021263-fips_ensure_security_initialised.patch
+Patch1015: rh2021263-fips_missing_native_returns.patch
 
 #############################################
 #
 # OpenJDK patches in need of upstreaming
 #
 #############################################
-# JDK-8276572: Fake libsyslookup.so library causes tooling issues
-Patch2000: jdk8276572-fake_libsyslookup_causes_tooling_issues.patch
 
 
 BuildRequires: autoconf
@@ -1703,7 +1709,8 @@ popd # openjdk
 %patch1011
 %patch1012
 %patch1013
-%patch2000
+%patch1014
+%patch1015
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
@@ -2467,7 +2474,18 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
-* Thu Dec 09 2021 Jiri Vanek <jvanek@redhat.com> - 1:17.0.1.0.12-12.rolling
+* Wed Jan 12 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.2.0.8-1
+- January 2022 security update to jdk 17.0.2+8
+- Extend LTS check to exclude EPEL.
+- Rename libsvml.so to libjsvml.so following JDK-8276025
+- Remove JDK-8276572 patch which is now upstream.
+- Rebase RH1995150 & RH1996182 patches following JDK-8275863 addition to module-info.java
+- Fix FIPS issues in native code and with initialisation of java.security.Security
+
+* Wed Jan 12 2022 Severin Gehwolf <sgehwolf@redhat.com> - 1:17.0.2.0.8-1
+- Set LTS designator.
+
+* Thu Dec 09 2021 Jiri Vanek <jvanek@redhat.com> - 1:17.0.1.0.12-13.rolling
 - Storing and restoring alterntives during update manually
 - Fixing Bug 2001567 - update of JDK/JRE is removing its manually selected alterantives and select (as auto) system JDK/JRE
 -- The move of alternatives creation to posttrans to fix:
