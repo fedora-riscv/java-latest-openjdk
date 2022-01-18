@@ -308,7 +308,7 @@
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
 %global buildver        12
-%global rpmrelease      15
+%global rpmrelease      16
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 # Using 10 digits may overflow the int used for priority, so we combine the patch and build versions
@@ -1296,6 +1296,7 @@ Patch1013: rh1991003-enable_fips_keys_import.patch
 # RH2021263: Resolve outstanding FIPS issues
 Patch1014: rh2021263-fips_ensure_security_initialised.patch
 Patch1015: rh2021263-fips_missing_native_returns.patch
+Patch1016: rh2021263-fips_separate_policy_and_fips_init.patch
 
 #############################################
 #
@@ -1717,6 +1718,7 @@ popd # openjdk
 %patch1013
 %patch1014
 %patch1015
+%patch1016
 
 %patch2000
 
@@ -2473,6 +2475,9 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Mon Jan 24 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.1.0.12-16.rolling
+- Separate crypto policy initialisation from FIPS initialisation, now they are no longer interdependent
+
 * Tue Jan 18 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.1.0.12-15.rolling
 - Sync gdb test with java-1.8.0-openjdk and improve architecture restrictions.
 - Disable on x86, x86_64, ppc64le & s390x while these are broken in rawhide.
