@@ -246,7 +246,7 @@
 # New Version-String scheme-style defines
 %global featurever 17
 %global interimver 0
-%global updatever 1
+%global updatever 2
 %global patchver 0
 # If you bump featurever, you must also bump vendor_version_string
 # Used via new version scheme. JDK 17 was
@@ -256,10 +256,15 @@
 # but in time of bootstrap of next jdk, it is featurever-1,
 # and this it is better to change it here, on single place
 %global buildjdkver 17
-# We don't add any LTS designator for STS packages (this package).
-# Neither for Fedora nor EPEL which would have %%{rhel} macro defined.
+# We don't add any LTS designator for STS packages (Fedora and EPEL).
+# We need to explicitly exclude EPEL as it would have the %%{rhel} macro defined.
+%if 0%{?rhel} && !0%{?epel}
+  %global lts_designator "LTS"
+  %global lts_designator_zip -%{lts_designator}
+%else
  %global lts_designator ""
  %global lts_designator_zip ""
+%endif
 
 # Define IcedTea version used for SystemTap tapsets and desktop file
 %global icedteaver      6.0.0pre00-c848b93a8598
@@ -269,8 +274,8 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        12
-%global rpmrelease      3
+%global buildver        8
+%global rpmrelease      1
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 # Using 10 digits may overflow the int used for priority, so we combine the patch and build versions
@@ -679,6 +684,10 @@ exit 0
 %{_jvmdir}/%{sdkdir %%1}/lib/libsaproc.so
 %endif
 %{_jvmdir}/%{sdkdir %%1}/lib/libsctp.so
+%ifarch %{svml_arches}
+%{_jvmdir}/%{sdkdir %%1}/lib/libjsvml.so
+%endif
+%{_jvmdir}/%{sdkdir %%1}/lib/libsyslookup.so
 %{_jvmdir}/%{sdkdir %%1}/lib/libverify.so
 %{_jvmdir}/%{sdkdir %%1}/lib/libzip.so
 %dir %{_jvmdir}/%{sdkdir %%1}/lib/jfr
@@ -715,10 +724,6 @@ exit 0
 %config(noreplace) %{_jvmdir}/%{sdkdir %%1}/conf/logging.properties
 %config(noreplace) %{_jvmdir}/%{sdkdir %%1}/conf/security/nss.cfg
 %config(noreplace) %{_jvmdir}/%{sdkdir %%1}/conf/management/jmxremote.access
-%ifarch %{svml_arches}
-%{_jvmdir}/%{sdkdir %%1}/lib/libsvml.so
-%endif
-%{_jvmdir}/%{sdkdir %%1}/lib/libsyslookup.so
 #This is a config template, thus not config-noreplace
 %config  %{_jvmdir}/%{sdkdir %%1}/conf/management/jmxremote.password.template
 %config  %{_jvmdir}/%{sdkdir %%1}/conf/sdp/sdp.conf.template
@@ -900,7 +905,7 @@ Requires: %{name}-headless%1%{?_isa} = %{epoch}:%{version}-%{release}
 OrderWithRequires: %{name}-headless%1%{?_isa} = %{epoch}:%{version}-%{release}
 # for java-X-openjdk package's desktop binding
 #Recommends: gtk2%{?_isa}
-# rhel7 does not have week dependencies
+# rhel7 does not have weak dependencies
 
 Provides: java-%{javaver}-%{origin}%1 = %{epoch}:%{version}-%{release}
 
@@ -1775,14 +1780,6 @@ do
     # All these tests rely on RPM failing the build if the exit code of any set
     # of piped commands is non-zero.
 
-    # If this is the empty library, libsyslookup.so, of the foreign function and memory
-    # API incubation module (JEP 412), skip the debuginfo check as this seems unreliable
-    # on s390x. It's not very useful for other arches either, so skip unconditionally.
-    if [ "`basename $lib`" = "libsyslookup.so" ]; then
-       echo "Skipping debuginfo check for empty library 'libsyslookup.so'"
-       continue
-    fi
-
     # Test for .debug_* sections in the shared object. This is the main test
     # Stripped objects will not contain these
     eu-readelf -S "$lib" | grep "] .debug_"
@@ -2205,6 +2202,15 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Mon Jan 24 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.2.0.8-1.rolling
+- January 2022 security update to jdk 17.0.2+8
+- Extend LTS check to exclude EPEL.
+- Rename libsvml.so to libjsvml.so following JDK-8276025
+- Remove libsyslookup opt-out now JDK-8276572 patch is upstream.
+
+* Mon Jan 24 2022 Severin Gehwolf <sgehwolf@redhat.com> - 1:17.0.2.0.8-1.rolling
+- Set LTS designator.
+
 * Tue Oct 26 2021 Jiri Vanek <jvanek@redhat.com> - 1:17.0.1.0.12-3.rolling
 - Minor cosmetic improvements to make spec more comparable between variants
 
