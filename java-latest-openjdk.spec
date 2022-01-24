@@ -303,7 +303,7 @@
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
 %global buildver        8
-%global rpmrelease      1
+%global rpmrelease      2
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 # Using 10 digits may overflow the int used for priority, so we combine the patch and build versions
@@ -1054,7 +1054,8 @@ Requires: ca-certificates
 # Require javapackages-filesystem for ownership of /usr/lib/jvm/ and macros
 Requires: javapackages-filesystem
 # Require zone-info data provided by tzdata-java sub-package
-Requires: tzdata-java >= 2015d
+# 2021e required as of JDK-8275766 in January 2022 CPU
+Requires: tzdata-java >= 2021e
 # for support of kernel stream control
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools%{?_isa}
@@ -1336,7 +1337,8 @@ BuildRequires: java-latest-openjdk-devel
 %ifnarch %{jit_arches}
 BuildRequires: libffi-devel
 %endif
-BuildRequires: tzdata-java >= 2015d
+# 2021e required as of JDK-8275766 in January 2022 CPU
+BuildRequires: tzdata-java >= 2021e
 # Earlier versions have a bug in tree vectorization on PPC
 BuildRequires: gcc >= 4.8.3-8
 
@@ -2474,7 +2476,10 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
-* Wed Jan 12 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.2.0.8-1
+* Mon Jan 24 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.2.0.8-2.rolling
+- Require tzdata 2021e as of JDK-8275766.
+
+* Wed Jan 12 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.2.0.8-1.rolling
 - January 2022 security update to jdk 17.0.2+8
 - Extend LTS check to exclude EPEL.
 - Rename libsvml.so to libjsvml.so following JDK-8276025
@@ -2482,7 +2487,7 @@ cjc.mainProgram(args)
 - Rebase RH1995150 & RH1996182 patches following JDK-8275863 addition to module-info.java
 - Fix FIPS issues in native code and with initialisation of java.security.Security
 
-* Wed Jan 12 2022 Severin Gehwolf <sgehwolf@redhat.com> - 1:17.0.2.0.8-1
+* Wed Jan 12 2022 Severin Gehwolf <sgehwolf@redhat.com> - 1:17.0.2.0.8-1.rolling
 - Set LTS designator.
 
 * Thu Dec 09 2021 Jiri Vanek <jvanek@redhat.com> - 1:17.0.1.0.12-13.rolling
