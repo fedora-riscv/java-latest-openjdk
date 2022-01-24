@@ -275,7 +275,7 @@
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
 %global buildver        8
-%global rpmrelease      1
+%global rpmrelease      2
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 # Using 10 digits may overflow the int used for priority, so we combine the patch and build versions
@@ -347,7 +347,7 @@
 # fix for https://bugzilla.redhat.com/show_bug.cgi?id=1111349
 #         https://bugzilla.redhat.com/show_bug.cgi?id=1590796#c14
 #         https://bugzilla.redhat.com/show_bug.cgi?id=1655938
-%global _privatelibs libsplashscreen[.]so.*|libawt_xawt[.]so.*|libjli[.]so.*|libattach[.]so.*|libawt[.]so.*|libextnet[.]so.*|libawt_headless[.]so.*|libdt_socket[.]so.*|libfontmanager[.]so.*|libinstrument[.]so.*|libj2gss[.]so.*|libj2pcsc[.]so.*|libj2pkcs11[.]so.*|libjaas[.]so.*|libjavajpeg[.]so.*|libjdwp[.]so.*|libjimage[.]so.*|libjsound[.]so.*|liblcms[.]so.*|libmanagement[.]so.*|libmanagement_agent[.]so.*|libmanagement_ext[.]so.*|libmlib_image[.]so.*|libnet[.]so.*|libnio[.]so.*|libprefs[.]so.*|librmi[.]so.*|libsaproc[.]so.*|libsctp[.]so.*|libzip[.]so.*
+%global _privatelibs libsplashscreen[.]so.*|libawt_xawt[.]so.*|libjli[.]so.*|libattach[.]so.*|libawt[.]so.*|libextnet[.]so.*|libawt_headless[.]so.*|libdt_socket[.]so.*|libfontmanager[.]so.*|libinstrument[.]so.*|libj2gss[.]so.*|libj2pcsc[.]so.*|libj2pkcs11[.]so.*|libjaas[.]so.*|libjavajpeg[.]so.*|libjdwp[.]so.*|libjimage[.]so.*|libjsound[.]so.*|liblcms[.]so.*|libmanagement[.]so.*|libmanagement_agent[.]so.*|libmanagement_ext[.]so.*|libmlib_image[.]so.*|libnet[.]so.*|libnio[.]so.*|libprefs[.]so.*|librmi[.]so.*|libsaproc[.]so.*|libsctp[.]so.*|libsystemconf[.]so.*|libzip[.]so.*
 %global _publiclibs libjawt[.]so.*|libjava[.]so.*|libjvm[.]so.*|libverify[.]so.*|libjsig[.]so.*
 %if %is_system_jdk
 %global __provides_exclude ^(%{_privatelibs})$
@@ -684,6 +684,7 @@ exit 0
 %{_jvmdir}/%{sdkdir %%1}/lib/libsaproc.so
 %endif
 %{_jvmdir}/%{sdkdir %%1}/lib/libsctp.so
+%{_jvmdir}/%{sdkdir %%1}/lib/libsystemconf.so
 %ifarch %{svml_arches}
 %{_jvmdir}/%{sdkdir %%1}/lib/libjsvml.so
 %endif
@@ -723,6 +724,7 @@ exit 0
 %config(noreplace) %{_jvmdir}/%{sdkdir %%1}/conf/security/java.security
 %config(noreplace) %{_jvmdir}/%{sdkdir %%1}/conf/logging.properties
 %config(noreplace) %{_jvmdir}/%{sdkdir %%1}/conf/security/nss.cfg
+%config(noreplace) %{_jvmdir}/%{sdkdir %%1}/conf/security/nss.fips.cfg
 %config(noreplace) %{_jvmdir}/%{sdkdir %%1}/conf/management/jmxremote.access
 #This is a config template, thus not config-noreplace
 %config  %{_jvmdir}/%{sdkdir %%1}/conf/management/jmxremote.password.template
@@ -1125,6 +1127,9 @@ Source14: TestECDSA.java
 # Verify system crypto (policy) can be disabled via a property
 Source15: TestSecurityProperties.java
 
+# nss fips configuration file
+Source17: nss.fips.cfg.in
+
 ############################################
 #
 # RPM/distribution specific patches
@@ -1149,13 +1154,35 @@ Patch5:    pr3695-toggle_system_crypto_policy.patch
 # Depend on pcs-lite-libs instead of pcs-lite-devel as this is only in optional repo
 Patch6: rh1684077-openjdk_should_depend_on_pcsc-lite-libs_instead_of_pcsc-lite-devel.patch
 
+# FIPS support patches
+# RH1655466: Support RHEL FIPS mode using SunPKCS11 provider
+Patch1001: rh1655466-global_crypto_and_fips.patch
+# RH1818909: No ciphersuites availale for SSLSocket in FIPS mode
+Patch1002: rh1818909-fips_default_keystore_type.patch
+# RH1860986: Disable TLSv1.3 with the NSS-FIPS provider until PKCS#11 v3.0 support is available
+Patch1004: rh1860986-disable_tlsv1.3_in_fips_mode.patch
+# RH1915071: Always initialise JavaSecuritySystemConfiguratorAccess
+Patch1007: rh1915071-always_initialise_configurator_access.patch
+# RH1929465: Improve system FIPS detection
+Patch1008: rh1929465-improve_system_FIPS_detection.patch
+Patch1011: rh1929465-dont_define_unused_throwioexception.patch
+# RH1995150: Disable non-FIPS crypto in SUN and SunEC security providers
+Patch1009: rh1995150-disable_non-fips_crypto.patch
+# RH1996182: Login to the NSS software token in FIPS mode
+Patch1010: rh1996182-login_to_nss_software_token.patch
+Patch1012: rh1996182-extend_security_policy.patch
+# RH1991003: Allow plain key import unless com.redhat.fips.plainKeySupport is set to false
+Patch1013: rh1991003-enable_fips_keys_import.patch
+# RH2021263: Resolve outstanding FIPS issues
+Patch1014: rh2021263-fips_ensure_security_initialised.patch
+Patch1015: rh2021263-fips_missing_native_returns.patch
+Patch1016: rh2021263-fips_separate_policy_and_fips_init.patch
+
 #############################################
 #
 # OpenJDK patches in need of upstreaming
 #
 #############################################
-
-
 
 BuildRequires: autoconf
 BuildRequires: automake
@@ -1539,6 +1566,19 @@ popd # openjdk
 
 %patch1000
 %patch600
+%patch1001
+%patch1002
+%patch1004
+%patch1007
+%patch1008
+%patch1009
+%patch1010
+%patch1011
+%patch1012
+%patch1013
+%patch1014
+%patch1015
+%patch1016
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
@@ -1588,6 +1628,8 @@ done
 # Setup nss.cfg
 sed -e "s:@NSS_LIBDIR@:%{NSS_LIBDIR}:g" %{SOURCE11} > nss.cfg
 
+# Setup nss.fips.cfg
+sed -e "s:@NSS_LIBDIR@:%{NSS_LIBDIR}:g" %{SOURCE17} > nss.fips.cfg
 
 %build
 # How many CPU's do we have?
@@ -1669,6 +1711,7 @@ scl enable devtoolset-8 "bash ../configure \
     --with-boot-jdk=/usr/lib/jvm/java-%{buildjdkver}-openjdk \
     --with-debug-level=$debugbuild \
     --with-native-debug-symbols=internal\
+    --disable-sysconf-nss \
     --enable-unlimited-crypto \
     --with-zlib=system \
     --with-libjpeg=system \
@@ -1717,6 +1760,9 @@ export JAVA_HOME=$(pwd)/%{buildoutputdir $suffix}/images/%{jdkimage}
 
 # Install nss.cfg right away as we will be using the JRE above
 install -m 644 nss.cfg $JAVA_HOME/conf/security/
+
+# Install nss.fips.cfg: NSS configuration for global FIPS mode (crypto-policies)
+install -m 644 nss.fips.cfg $JAVA_HOME/conf/security/
 
 # Use system-wide tzdata
 rm $JAVA_HOME/lib/tzdb.dat
@@ -2202,6 +2248,15 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Wed Mar 23 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.2.0.8-2.rolling
+- Restore missing FIPS patches from other branches
+- Fix FIPS issues in native code and with initialisation of java.security.Security
+- Separate crypto policy initialisation from FIPS initialisation, now they are no longer interdependent
+
+* Wed Mar 23 2022 Severin Gehwolf <sgehwolf@redhat.com> - 1:17.0.2.0.8-2.rolling
+- Use 'sql:' prefix in nss.fips.cfg as F35+ no longer ship the legacy
+-  secmod.db file as part of nss
+
 * Mon Jan 24 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.2.0.8-1.rolling
 - January 2022 security update to jdk 17.0.2+8
 - Extend LTS check to exclude EPEL.
