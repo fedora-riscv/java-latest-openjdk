@@ -2501,7 +2501,7 @@ cjc.mainProgram(args)
 * Thu Dec 09 2021 Jiri Vanek <jvanek@redhat.com> - 1:17.0.1.0.12-10.rolling
 - replaced tabs by sets of spaces to make rpmlint happy
 
-* Mov Nov 29 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.1.0.12-9.rolling
+* Mon Nov 29 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.1.0.12-9.rolling
 - Handle Fedora in distro conditionals that currently only pertain to RHEL.
 
 * Fri Nov 05 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.1.0.12-8.rolling
