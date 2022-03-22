@@ -21,6 +21,8 @@
 %bcond_without release
 # Enable static library builds by default.
 %bcond_without staticlibs
+# Build a fresh libjvm.so for use in a copy of the bootstrap JDK
+%bcond_with fresh_libjvm
 
 # Workaround for stripping of debug symbols from static libraries
 %if %{with staticlibs}
@@ -28,6 +30,13 @@
 %global include_staticlibs 1
 %else
 %global include_staticlibs 0
+%endif
+
+# Define whether to use the bootstrap JDK directly or with a fresh libjvm.so
+%if %{with fresh_libjvm}
+%global build_hotspot_first 1
+%else
+%global build_hotspot_first 0
 %endif
 
 # The -g flag says to use strip -g instead of full strip on DSOs or EXEs.
@@ -99,17 +108,20 @@
 %global ppc64be         ppc64 ppc64p7
 # Set of architectures which support multiple ABIs
 %global multilib_arches %{power64} sparc64 x86_64
-# Set of architectures for which we build debug builds
+# Set of architectures for which we build slowdebug builds
 %global debug_arches    %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{power64} s390x
+# Set of architectures for which we build fastdebug builds
+%global fastdebug_arches x86_64 ppc64le aarch64
 # Set of architectures with a Just-In-Time (JIT) compiler
-%global jit_arches      %{debug_arches} %{arm}
+%global jit_arches      %{arm} %{aarch64} %{ix86} %{power64} s390x sparcv9 sparc64 x86_64
+# Set of architectures which use the Zero assembler port (!jit_arches)
+%global zero_arches ppc s390
 # Set of architectures which run a full bootstrap cycle
 %global bootstrap_arches %{jit_arches}
 # Set of architectures which support SystemTap tapsets
 %global systemtap_arches %{jit_arches}
 # Set of architectures with a Ahead-Of-Time (AOT) compiler
 %global aot_arches      x86_64 %{aarch64}
-%global fastdebug_arches x86_64 ppc64le aarch64
 # Set of architectures which support the serviceability agent
 %global sa_arches       %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{power64} %{arm}
 # Set of architectures which support class data sharing
@@ -124,6 +136,8 @@
 %global ssbd_arches x86_64
 # Set of architectures for which java has short vector math library (libsvml.so)
 %global svml_arches x86_64
+# Set of architectures where we verify backtraces with gdb
+%global gdb_arches %{jit_arches} %{zero_arches}
 
 # By default, we build a debug build during main build on JIT architectures
 %if %{with slowdebug}
@@ -166,7 +180,7 @@
 %global fastdebug_build %{nil}
 %endif
 
-# If you disable both builds, then the build fails
+# If you disable all builds, then the build fails
 # Build and test slowdebug first as it provides the best diagnostics
 %global build_loop %{slowdebug_build} %{fastdebug_build} %{normal_build}
 
@@ -200,7 +214,18 @@
 %global release_targets images docs-zip
 # No docs nor bootcycle for debug builds
 %global debug_targets images
+# Target to use to just build HotSpot
+%global hotspot_target hotspot
 
+# JDK to use for bootstrapping
+%global bootjdk /usr/lib/jvm/java-%{buildjdkver}-openjdk
+
+# VM variant being built
+%ifarch %{zero_arches}
+%global vm_variant zero
+%else
+%global vm_variant server
+%endif
 
 # Filter out flags from the optflags macro that cause problems with the OpenJDK build
 # We filter out -O flags so that the optimization of HotSpot is not lowered from O3 to O2
@@ -220,50 +245,62 @@
 # In some cases, the arch used by the JDK does
 # not match _arch.
 # Also, in some cases, the machine name used by SystemTap
-# does not match that given by _build_cpu
+# does not match that given by _target_cpu
 %ifarch x86_64
 %global archinstall amd64
+%global stapinstall x86_64
 %endif
 %ifarch ppc
 %global archinstall ppc
+%global stapinstall powerpc
 %endif
 %ifarch %{ppc64be}
 %global archinstall ppc64
+%global stapinstall powerpc
 %endif
 %ifarch %{ppc64le}
 %global archinstall ppc64le
+%global stapinstall powerpc
 %endif
 %ifarch %{ix86}
 %global archinstall i686
+%global stapinstall i386
 %endif
 %ifarch ia64
 %global archinstall ia64
+%global stapinstall ia64
 %endif
 %ifarch s390
 %global archinstall s390
+%global stapinstall s390
 %endif
 %ifarch s390x
 %global archinstall s390x
+%global stapinstall s390
 %endif
 %ifarch %{arm}
 %global archinstall arm
+%global stapinstall arm
 %endif
 %ifarch %{aarch64}
 %global archinstall aarch64
+%global stapinstall arm64
 %endif
 # 32 bit sparc, optimized for v9
 %ifarch sparcv9
 %global archinstall sparc
+%global stapinstall %{_target_cpu}
 %endif
 # 64 bit sparc
 %ifarch sparc64
 %global archinstall sparcv9
+%global stapinstall %{_target_cpu}
 %endif
-%ifnarch %{jit_arches}
-%global archinstall %{_arch}
+# Need to support noarch for srpm build
+%ifarch noarch
+%global archinstall %{nil}
+%global stapinstall %{nil}
 %endif
-
-
 
 %ifarch %{systemtap_arches}
 %global with_systemtap 1
@@ -272,9 +309,9 @@
 %endif
 
 # New Version-String scheme-style defines
-%global featurever 17
+%global featurever 18
 %global interimver 0
-%global updatever 2
+%global updatever 0
 %global patchver 0
 # If you bump featurever, you must also bump vendor_version_string
 # Used via new version scheme. JDK 17 was
@@ -296,14 +333,16 @@
 
 # Define IcedTea version used for SystemTap tapsets and desktop file
 %global icedteaver      6.0.0pre00-c848b93a8598
+# Define current Git revision for the FIPS support patches
+%global fipsver 39968997e2e
 
 # Standard JPackage naming and versioning defines
 %global origin          openjdk
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        8
-%global rpmrelease      2
+%global buildver        37
+%global rpmrelease      1
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 # Using 10 digits may overflow the int used for priority, so we combine the patch and build versions
@@ -424,10 +463,10 @@
 # and 32 bit architectures we place the tapsets under the arch
 # specific dir (note that systemtap will only pickup the tapset
 # for the primary arch for now). Systemtap uses the machine name
-# aka build_cpu as architecture specific directory name.
+# aka target_cpu as architecture specific directory name.
 %global tapsetroot /usr/share/systemtap
 %global tapsetdirttapset %{tapsetroot}/tapset/
-%global tapsetdir %{tapsetdirttapset}/%{_build_cpu}
+%global tapsetdir %{tapsetdirttapset}/%{stapinstall}
 %endif
 
 # not-duplicated scriptlets for normal/debug packages
@@ -585,7 +624,9 @@ alternatives \\
   --slave %{_bindir}/jlink jlink %{sdkbindir -- %{?1}}/jlink \\
   --slave %{_bindir}/jmod jmod %{sdkbindir -- %{?1}}/jmod \\
 %ifarch %{sa_arches}
+%ifnarch %{zero_arches}
   --slave %{_bindir}/jhsdb jhsdb %{sdkbindir -- %{?1}}/jhsdb \\
+%endif
 %endif
   --slave %{_bindir}/jar jar %{sdkbindir -- %{?1}}/jar \\
   --slave %{_bindir}/jarsigner jarsigner %{sdkbindir -- %{?1}}/jarsigner \\
@@ -607,6 +648,7 @@ alternatives \\
   --slave %{_bindir}/jstack jstack %{sdkbindir -- %{?1}}/jstack \\
   --slave %{_bindir}/jstat jstat %{sdkbindir -- %{?1}}/jstat \\
   --slave %{_bindir}/jstatd jstatd %{sdkbindir -- %{?1}}/jstatd \\
+  --slave %{_bindir}/jwebserver jwebserver %{sdkbindir -- %{?1}}/jwebserver \\
   --slave %{_bindir}/serialver serialver %{sdkbindir -- %{?1}}/serialver \\
   --slave %{_mandir}/man1/jar.1$ext jar.1$ext \\
   %{_mandir}/man1/jar-%{uniquesuffix -- %{?1}}.1$ext \\
@@ -640,6 +682,8 @@ alternatives \\
   %{_mandir}/man1/jstack-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/jstat.1$ext jstat.1$ext \\
   %{_mandir}/man1/jstat-%{uniquesuffix -- %{?1}}.1$ext \\
+  --slave %{_mandir}/man1/jwebserver.1$ext jwebserver.1$ext \\
+  %{_mandir}/man1/jwebserver-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/jstatd.1$ext jstatd.1$ext \\
   %{_mandir}/man1/jstatd-%{uniquesuffix -- %{?1}}.1$ext \\
   --slave %{_mandir}/man1/serialver.1$ext serialver.1$ext \\
@@ -798,7 +842,9 @@ exit 0
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/librmi.so
 # Some architectures don't have the serviceability agent
 %ifarch %{sa_arches}
+%ifnarch %{zero_arches}
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/libsaproc.so
+%endif
 %endif
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/libsctp.so
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/libsystemconf.so
@@ -815,9 +861,9 @@ exit 0
 %{_mandir}/man1/%{alt_java_name}-%{uniquesuffix -- %{?1}}.1*
 %{_mandir}/man1/keytool-%{uniquesuffix -- %{?1}}.1*
 %{_mandir}/man1/rmiregistry-%{uniquesuffix -- %{?1}}.1*
-%{_jvmdir}/%{sdkdir -- %{?1}}/lib/server/
+%{_jvmdir}/%{sdkdir -- %{?1}}/lib/%{vm_variant}/
 %ifarch %{share_arches}
-%attr(444, root, root) %ghost %{_jvmdir}/%{sdkdir -- %{?1}}/lib/server/classes.jsa
+%attr(444, root, root) %ghost %{_jvmdir}/%{sdkdir -- %{?1}}/lib/%{vm_variant}/classes.jsa
 %endif
 %dir %{etcjavasubdir}
 %dir %{etcjavadir -- %{?1}}
@@ -891,8 +937,10 @@ exit 0
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/jimage
 # Some architectures don't have the serviceability agent
 %ifarch %{sa_arches}
+%ifnarch %{zero_arches}
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/jhsdb
 %{_mandir}/man1/jhsdb-%{uniquesuffix -- %{?1}}.1.gz
+%endif
 %endif
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/jinfo
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/jlink
@@ -905,6 +953,7 @@ exit 0
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/jstack
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/jstat
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/jstatd
+%{_jvmdir}/%{sdkdir -- %{?1}}/bin/jwebserver
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/serialver
 %{_jvmdir}/%{sdkdir -- %{?1}}/include
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/ct.sym
@@ -929,12 +978,14 @@ exit 0
 %{_mandir}/man1/jstack-%{uniquesuffix -- %{?1}}.1*
 %{_mandir}/man1/jstat-%{uniquesuffix -- %{?1}}.1*
 %{_mandir}/man1/jstatd-%{uniquesuffix -- %{?1}}.1*
+%{_mandir}/man1/jwebserver-%{uniquesuffix -- %{?1}}.1*
 %{_mandir}/man1/serialver-%{uniquesuffix -- %{?1}}.1*
 %{_mandir}/man1/jdeprscan-%{uniquesuffix -- %{?1}}.1.gz
 %{_mandir}/man1/jlink-%{uniquesuffix -- %{?1}}.1.gz
 %{_mandir}/man1/jmod-%{uniquesuffix -- %{?1}}.1.gz
 %{_mandir}/man1/jshell-%{uniquesuffix -- %{?1}}.1.gz
 %{_mandir}/man1/jfr-%{uniquesuffix -- %{?1}}.1.gz
+%{_mandir}/man1/jwebserver-%{uniquesuffix -- %{?1}}.1*
 
 %if %{with_systemtap}
 %dir %{tapsetroot}
@@ -1054,8 +1105,7 @@ Requires: ca-certificates
 # Require javapackages-filesystem for ownership of /usr/lib/jvm/ and macros
 Requires: javapackages-filesystem
 # Require zone-info data provided by tzdata-java sub-package
-# 2021e required as of JDK-8275766 in January 2022 CPU
-Requires: tzdata-java >= 2021e
+Requires: tzdata-java >= 2015d
 # for support of kernel stream control
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools%{?_isa}
@@ -1068,6 +1118,8 @@ OrderWithRequires: copy-jdk-configs
 %endif
 # for printing support
 Requires: cups-libs
+# for FIPS PKCS11 provider
+Requires: nss
 # Post requires alternatives to install tool alternatives
 Requires(post):   %{alternatives_requires}
 # Postun requires alternatives to uninstall tool alternatives
@@ -1216,7 +1268,7 @@ URL:      http://openjdk.java.net/
 
 # to regenerate source0 (jdk) run update_package.sh
 # update_package.sh contains hard-coded repos, revisions, tags, and projects to regenerate the source archives
-Source0: openjdk-jdk%{featurever}u-jdk-%{filever}+%{buildver}%{?tagsuffix:-%{tagsuffix}}.tar.xz
+Source0: openjdk-jdk%{featurever}-jdk-%{filever}+%{buildver}%{?tagsuffix:-%{tagsuffix}}.tar.xz
 
 # Use 'icedtea_sync.sh' to update the following
 # They are based on code contained in the IcedTea project (6.x).
@@ -1264,42 +1316,36 @@ Patch1:    rh1648242-accessible_toolkit_crash_do_not_break_jvm.patch
 # Restrict access to java-atk-wrapper classes
 Patch2:    rh1648644-java_access_bridge_privileged_security.patch
 Patch3:    rh649512-remove_uses_of_far_in_jpeg_libjpeg_turbo_1_4_compat_for_jdk10_and_up.patch
-# Follow system wide crypto policy RHBZ#1249083
-Patch4:    pr3183-rh1340845-support_fedora_rhel_system_crypto_policy.patch
-# PR3695: Allow use of system crypto policy to be disabled by the user
-Patch5:    pr3695-toggle_system_crypto_policy.patch
-# Depend on pcs-lite-libs instead of pcs-lite-devel as this is only in optional repo
+# Depend on pcsc-lite-libs instead of pcs-lite-devel as this is only in optional repo
 Patch6: rh1684077-openjdk_should_depend_on_pcsc-lite-libs_instead_of_pcsc-lite-devel.patch
 
-# FIPS support patches
+# Crypto policy and FIPS support patches
+# Patch is generated from the fips-18u tree at https://github.com/gnu-andrew/jdk/commits/fips-18u
+# as follows: git diff jdk-18+<update> > fips-18u-$(git show -s --format=%h HEAD).patch
+# Fixes currently included:
+# PR3183, RH1340845: Follow system wide crypto policy
+# PR3695: Allow use of system crypto policy to be disabled by the user
 # RH1655466: Support RHEL FIPS mode using SunPKCS11 provider
-Patch1001: rh1655466-global_crypto_and_fips.patch
 # RH1818909: No ciphersuites availale for SSLSocket in FIPS mode
-Patch1002: rh1818909-fips_default_keystore_type.patch
 # RH1860986: Disable TLSv1.3 with the NSS-FIPS provider until PKCS#11 v3.0 support is available
-Patch1004: rh1860986-disable_tlsv1.3_in_fips_mode.patch
 # RH1915071: Always initialise JavaSecuritySystemConfiguratorAccess
-Patch1007: rh1915071-always_initialise_configurator_access.patch
 # RH1929465: Improve system FIPS detection
-Patch1008: rh1929465-improve_system_FIPS_detection.patch
-Patch1011: rh1929465-dont_define_unused_throwioexception.patch
 # RH1995150: Disable non-FIPS crypto in SUN and SunEC security providers
-Patch1009: rh1995150-disable_non-fips_crypto.patch
 # RH1996182: Login to the NSS software token in FIPS mode
-Patch1010: rh1996182-login_to_nss_software_token.patch
-Patch1012: rh1996182-extend_security_policy.patch
 # RH1991003: Allow plain key import unless com.redhat.fips.plainKeySupport is set to false
-Patch1013: rh1991003-enable_fips_keys_import.patch
 # RH2021263: Resolve outstanding FIPS issues
-Patch1014: rh2021263-fips_ensure_security_initialised.patch
-Patch1015: rh2021263-fips_missing_native_returns.patch
+# RH2052819: Fix FIPS reliance on crypto policies
+# RH2052829: Detect NSS at Runtime for FIPS detection
+# RH2052070: Enable AlgorithmParameters and AlgorithmParameterGenerator services in FIPS mode
+Patch1001: fips-18u-%{fipsver}.patch
 
 #############################################
 #
 # OpenJDK patches in need of upstreaming
 #
 #############################################
-
+# JDK-8282004: x86_32.ad rules that call SharedRuntime helpers should have CALL effects
+Patch7: jdk8282004-x86_32-missing_call_effects.patch
 
 BuildRequires: autoconf
 BuildRequires: automake
@@ -1326,19 +1372,18 @@ BuildRequires: libXrandr-devel
 BuildRequires: libXrender-devel
 BuildRequires: libXt-devel
 BuildRequires: libXtst-devel
-# Requirements for setting up the nss.cfg and FIPS support
-BuildRequires: nss-devel >= 3.53
+# Requirement for setting up nss.cfg and nss.fips.cfg
+BuildRequires: nss-devel
 BuildRequires: pkgconfig
 BuildRequires: xorg-x11-proto-devel
 BuildRequires: zip
 BuildRequires: javapackages-filesystem
 BuildRequires: java-latest-openjdk-devel
 # Zero-assembler build requirement
-%ifnarch %{jit_arches}
+%ifarch %{zero_arches}
 BuildRequires: libffi-devel
 %endif
-# 2021e required as of JDK-8275766 in January 2022 CPU
-BuildRequires: tzdata-java >= 2021e
+BuildRequires: tzdata-java >= 2015d
 # Earlier versions have a bug in tree vectorization on PPC
 BuildRequires: gcc >= 4.8.3-8
 
@@ -1655,6 +1700,14 @@ The %{origin_nice} %{featurever} API documentation compressed in a single archiv
 %endif
 
 %prep
+
+# Using the echo macro breaks rpmdev-bumpspec, as it parses the first line of stdout :-(
+%if 0%{?stapinstall:1}
+  echo "CPU: %{_target_cpu}, arch install directory: %{archinstall}, SystemTap install directory: %{stapinstall}"
+%else
+  %{error:Unrecognised architecture %{_target_cpu}}
+%endif
+
 if [ %{include_normal_build} -eq 0 -o  %{include_normal_build} -eq 1 ] ; then
   echo "include_normal_build is %{include_normal_build}"
 else
@@ -1694,25 +1747,15 @@ pushd %{top_level_dir_name}
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
-%patch4 -p1
-%patch5 -p1
 %patch6 -p1
+%patch7 -p1
+# Add crypto policy and FIPS support
+%patch1001 -p1
+# alt-java
+%patch600 -p1
+# nss.cfg PKCS11 support; must come last as it also alters java.security
+%patch1000 -p1
 popd # openjdk
-
-%patch1000
-%patch600
-%patch1001
-%patch1002
-%patch1004
-%patch1007
-%patch1008
-%patch1009
-%patch1010
-%patch1011
-%patch1012
-%patch1013
-%patch1014
-%patch1015
 
 # Extract systemtap tapsets
 %if %{with_systemtap}
@@ -1792,7 +1835,12 @@ EXTRA_CPP_FLAGS="%ourcppflags"
 # fix rpmlint warnings
 EXTRA_CFLAGS="$EXTRA_CFLAGS -fno-strict-aliasing"
 %endif
-export EXTRA_CFLAGS
+%ifarch %{ix86}
+# Align stack boundary on x86_32
+EXTRA_CFLAGS="$(echo ${EXTRA_CFLAGS} | sed -e 's|-mstackrealign|-mincoming-stack-boundary=2 -mpreferred-stack-boundary=4|')"
+EXTRA_CPP_FLAGS="$(echo ${EXTRA_CPP_FLAGS} | sed -e 's|-mstackrealign|-mincoming-stack-boundary=2 -mpreferred-stack-boundary=4|')"
+%endif
+export EXTRA_CFLAGS EXTRA_CPP_FLAGS
 
 function buildjdk() {
     local outputdir=${1}
@@ -1834,7 +1882,7 @@ function buildjdk() {
     pushd ${outputdir}
 
     bash ${top_dir_abs_src_path}/configure \
-%ifnarch %{jit_arches}
+%ifarch %{zero_arches}
     --with-jvm-variants=zero \
 %endif
 %ifarch %{ppc64le}
@@ -1851,7 +1899,7 @@ function buildjdk() {
     --with-boot-jdk=${buildjdk} \
     --with-debug-level=${debuglevel} \
     --with-native-debug-symbols="%{debug_symbols}" \
-    --enable-sysconf-nss \
+    --disable-sysconf-nss \
     --enable-unlimited-crypto \
     --with-zlib=system \
     --with-libjpeg=${link_opt} \
@@ -1885,33 +1933,45 @@ function buildjdk() {
 function installjdk() {
     local imagepath=${1}
 
-    # the build (erroneously) removes read permissions from some jars
-    # this is a regression in OpenJDK 7 (our compiler):
-    # http://icedtea.classpath.org/bugzilla/show_bug.cgi?id=1437
-    find ${imagepath} -iname '*.jar' -exec chmod ugo+r {} \;
+    if [ -d ${imagepath} ] ; then
+	# the build (erroneously) removes read permissions from some jars
+	# this is a regression in OpenJDK 7 (our compiler):
+	# http://icedtea.classpath.org/bugzilla/show_bug.cgi?id=1437
+	find ${imagepath} -iname '*.jar' -exec chmod ugo+r {} \;
 
-    # Build screws up permissions on binaries
-    # https://bugs.openjdk.java.net/browse/JDK-8173610
-    find ${imagepath} -iname '*.so' -exec chmod +x {} \;
-    find ${imagepath}/bin/ -exec chmod +x {} \;
+	# Build screws up permissions on binaries
+	# https://bugs.openjdk.java.net/browse/JDK-8173610
+	find ${imagepath} -iname '*.so' -exec chmod +x {} \;
+	find ${imagepath}/bin/ -exec chmod +x {} \;
 
-    # Install nss.cfg right away as we will be using the JRE above
-    install -m 644 nss.cfg ${imagepath}/conf/security/
+	# Install nss.cfg right away as we will be using the JRE above
+	install -m 644 nss.cfg ${imagepath}/conf/security/
 
-    # Install nss.fips.cfg: NSS configuration for global FIPS mode (crypto-policies)
-    install -m 644 nss.fips.cfg ${imagepath}/conf/security/
+	# Install nss.fips.cfg: NSS configuration for global FIPS mode (crypto-policies)
+	install -m 644 nss.fips.cfg ${imagepath}/conf/security/
 
-    # Use system-wide tzdata
-    rm ${imagepath}/lib/tzdb.dat
-    ln -s %{_datadir}/javazi-1.8/tzdb.dat ${imagepath}/lib/tzdb.dat
+	# Use system-wide tzdata
+	rm ${imagepath}/lib/tzdb.dat
+	ln -s %{_datadir}/javazi-1.8/tzdb.dat ${imagepath}/lib/tzdb.dat
 
-    # Create fake alt-java as a placeholder for future alt-java
-    pushd ${imagepath}
-    # add alt-java man page
-    echo "Hardened java binary recommended for launching untrusted code from the Web e.g. javaws" > man/man1/%{alt_java_name}.1
-    cat man/man1/java.1 >> man/man1/%{alt_java_name}.1
-    popd
+	# Create fake alt-java as a placeholder for future alt-java
+	pushd ${imagepath}
+	# add alt-java man page
+	echo "Hardened java binary recommended for launching untrusted code from the Web e.g. javaws" > man/man1/%{alt_java_name}.1
+	cat man/man1/java.1 >> man/man1/%{alt_java_name}.1
+	popd
+    fi
 }
+
+%if %{build_hotspot_first}
+  # Build a fresh libjvm.so first and use it to bootstrap
+  cp -LR --preserve=mode,timestamps %{bootjdk} newboot
+  systemjdk=$(pwd)/newboot
+  buildjdk build/newboot ${systemjdk} %{hotspot_target} "release" "bundled"
+  mv build/newboot/jdk/lib/%{vm_variant}/libjvm.so newboot/lib/%{vm_variant}
+%else
+  systemjdk=%{bootjdk}
+%endif
 
 for suffix in %{build_loop} ; do
 
@@ -1922,7 +1982,6 @@ for suffix in %{build_loop} ; do
       debugbuild=`echo $suffix  | sed "s/-//g"`
   fi
 
-  systemjdk=/usr/lib/jvm/java-%{buildjdkver}-openjdk
 
   for loop in %{main_suffix} %{staticlibs_loop} ; do
 
@@ -2075,19 +2134,15 @@ gdb -q "$JAVA_HOME/bin/java" <<EOF | tee gdb.out
 handle SIGSEGV pass nostop noprint
 handle SIGILL pass nostop noprint
 set breakpoint pending on
-break javaCalls.cpp:1
+break javaCalls.cpp:58
 commands 1
 backtrace
 quit
 end
 run -version
 EOF
-%if 0%{?fedora} > 0
-# This fails on s390x for some reason. Disable for now. See:
-# https://koji.fedoraproject.org/koji/taskinfo?taskID=41499227
-%ifnarch s390x
+%ifarch %{gdb_arches}
 grep 'JavaCallWrapper::JavaCallWrapper' gdb.out
-%endif
 %endif
 
 # Check src.zip has all sources. See RHBZ#1130490
@@ -2472,19 +2527,62 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
-* Mon Jan 24 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.2.0.8-2.rolling
-- Require tzdata 2021e as of JDK-8275766.
+* Wed Mar 16 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:18.0.0.0.37-1.rolling
+- Update to RC version of OpenJDK 18
+- Support JVM variant zero following JDK-8273494 no longer installing Zero's libjvm.so in the server directory
+- Disable HotSpot-only pre-build which is incompatible with the boot JDK being a different major version to that being built
+- Rebase FIPS patches from fips-18u branch and simplify by using a single patch from that repository
+- Detect NSS at runtime for FIPS detection
+- Turn off build-time NSS linking and go back to an explicit Requires on NSS
+- Enable AlgorithmParameters and AlgorithmParameterGenerator services in FIPS mode
+- Rebase RH1648249 nss.cfg patch so it applies after the FIPS patch
 
-* Wed Jan 12 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.2.0.8-1.rolling
+* Wed Mar 16 2022 Petra Alice Mikova <pmikova@redhat.com> - 1:18.0.0.0.37-1.rolling
+- update to ea version of jdk18
+- add new slave jwebserver and corresponding manpage
+- adjust rh1684077-openjdk_should_depend_on_pcsc-lite-libs_instead_of_pcsc-lite-devel.patch
+
+* Wed Feb 16 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.2.0.8-5
+- Reinstate JIT builds on x86_32.
+- Add JDK-8282004 to fix missing CALL effects on x86_32.
+
+* Mon Feb 07 2022 Severin Gehwolf <sgehwolf@redhat.com> - 1:17.0.2.0.8-4
+- Re-enable gdb backtrace check.
+- Resolves RHBZ#2041970
+
+* Fri Feb 04 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.2.0.8-3
+- Temporarily move x86 to use Zero in order to get a working build
+- Replace -mstackrealign with -mincoming-stack-boundary=2 -mpreferred-stack-boundary=4 on x86_32 for stack alignment
+- Support a HotSpot-only build so a freshly built libjvm.so can then be used in the bootstrap JDK.
+- Explicitly list JIT architectures rather than relying on those with slowdebug builds
+- Disable the serviceability agent on Zero architectures even when the architecture itself is supported
+
+* Mon Jan 24 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.2.0.8-2.rolling
+- Introduce stapinstall variable to set SystemTap arch directory correctly (e.g. arm64 on aarch64)
+- Need to support noarch for creating source RPMs for non-scratch builds.
+
+* Mon Jan 24 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.2.0.8-1.rolling
 - January 2022 security update to jdk 17.0.2+8
 - Extend LTS check to exclude EPEL.
 - Rename libsvml.so to libjsvml.so following JDK-8276025
 - Remove JDK-8276572 patch which is now upstream.
 - Rebase RH1995150 & RH1996182 patches following JDK-8275863 addition to module-info.java
-- Fix FIPS issues in native code and with initialisation of java.security.Security
 
-* Wed Jan 12 2022 Severin Gehwolf <sgehwolf@redhat.com> - 1:17.0.2.0.8-1.rolling
+* Mon Jan 24 2022 Severin Gehwolf <sgehwolf@redhat.com> - 1:17.0.2.0.8-1.rolling
 - Set LTS designator.
+
+* Mon Jan 24 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.1.0.12-16.rolling
+- Separate crypto policy initialisation from FIPS initialisation, now they are no longer interdependent
+
+* Thu Jan 20 2022 Fedora Release Engineering <releng@fedoraproject.org> - 1:17.0.1.0.12-15.rolling.1
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_36_Mass_Rebuild
+
+* Tue Jan 18 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.1.0.12-15.rolling
+- Sync gdb test with java-1.8.0-openjdk and improve architecture restrictions.
+- Disable on x86, x86_64, ppc64le & s390x while these are broken in rawhide.
+
+* Thu Jan 13 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.1.0.12-14.rolling
+- Fix FIPS issues in native code and with initialisation of java.security.Security
 
 * Thu Dec 09 2021 Jiri Vanek <jvanek@redhat.com> - 1:17.0.1.0.12-13.rolling
 - Storing and restoring alterntives during update manually
@@ -2513,31 +2611,62 @@ cjc.mainProgram(args)
 - Patch syslookup.c so it actually has some code to be compiled into libsyslookup
 - Related: rhbz#2013846
 
-* Wed Nov 03 2021 Severin Gehwolf <sgehwolf@redhat.com> - 1:17.0.1.0.12-2.rolling
+* Wed Nov 03 2021 Severin Gehwolf <sgehwolf@redhat.com> - 1:17.0.1.0.12-7.rolling
 - Use 'sql:' prefix in nss.fips.cfg as F35+ no longer ship the legacy
   secmod.db file as part of nss
+
+* Wed Nov 03 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.1.0.12-6.rolling
+- Turn off bootstrapping for slow debug builds, which are particularly slow on ppc64le.
+
+* Thu Oct 28 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.1.0.12-5.rolling
+- Sync desktop files with upstream IcedTea release 3.15.0 using new script
+
+* Tue Oct 26 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.1.0.12-4.rolling
+- Restructure the build so a minimal initial build is then used for the final build (with docs)
+- This reduces pressure on the system JDK and ensures the JDK being built can do a full build
+
+* Tue Oct 26 2021 Jiri Vanek <jvanek@redhat.com> - 1:17.0.1.0.12-3.rolling
+- Minor cosmetic improvements to make spec more comparable between variants
+
+* Thu Oct 21 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.1.0.12-2.rolling
+- Update tapsets from IcedTea 6.x repository with fix for JDK-8015774 changes (_heap->_heaps) and @JAVA_SPEC_VER@
+- Update icedtea_sync.sh with a VCS mode that retrieves sources from a Mercurial repository
 
 * Wed Oct 20 2021 Petra Alice Mikova <pmikova@redhat.com> - 1:17.0.1.0.12-1.rolling
 - October CPU update to jdk 17.0.1+12
 - dropped commented-out source line
-- bump buildjdkver to 17
 
-* Mon Oct 11 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.35-3.rolling
-- Update release notes to document the major changes between OpenJDK 11 & 17.
-
-* Sun Oct 10 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.35-2.rolling
-- Fix unused function compiler warning found in systemconf.c
-- Extend the default security policy to accomodate PKCS11 accessing jdk.internal.access.
+* Sun Oct 10 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.35-5.rolling
 - Allow plain key import to be disabled with -Dcom.redhat.fips.plainKeySupport=false
 
-* Sun Oct 10 2021 Martin Balao <mbalao@redhat.com> - 1:17.0.0.0.35-2.rolling
-- Add patch to disable non-FIPS crypto in the SUN and SunEC security providers.
-- Add patch to login to the NSS software token when in FIPS mode.
+* Sun Oct 10 2021 Martin Balao <mbalao@redhat.com> - 1:17.0.0.0.35-5.rolling
 - Add patch to allow plain key import.
+
+* Thu Sep 30 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.35-4.rolling
+- Fix unused function compiler warning found in systemconf.c
+- Extend the default security policy to accomodate PKCS11 accessing jdk.internal.access.
+
+* Thu Sep 30 2021 Martin Balao <mbalao@redhat.com> - 1:17.0.0.0.35-4.rolling
+- Add patch to login to the NSS software token when in FIPS mode.
+
+* Mon Sep 27 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.35-3.rolling
+- Update release notes to document the major changes between OpenJDK 11 & 17.
+
+* Thu Sep 16 2021 Martin Balao <mbalao@redhat.com> - 1:17.0.0.0.35-2.rolling
+- Add patch to disable non-FIPS crypto in the SUN and SunEC security providers.
 
 * Tue Sep 14 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.35-1.rolling
 - Update to jdk-17+35, also known as jdk-17-ga.
 - Switch to GA mode.
+
+* Wed Sep 08 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.33-0.3.ea.rolling
+- Minor code cleanups on FIPS detection patch and check for SECMOD_GetSystemFIPSEnabled in configure.
+- Remove unneeded Requires on NSS as it will now be dynamically linked and detected by RPM.
+
+* Wed Sep 08 2021 Martin Balao <mbalao@redhat.com> - 1:17.0.0.0.33-0.3.ea.rolling
+- Detect FIPS using SECMOD_GetSystemFIPSEnabled in the new libsystemconf JDK library.
+
+* Mon Sep 06 2021 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.0.0.33-0.2.ea.rolling
 - Update RH1655466 FIPS patch with changes in OpenJDK 8 version.
 - SunPKCS11 runtime provider name is a concatenation of "SunPKCS11-" and the name in the config file.
 - Change nss.fips.cfg config name to "NSS-FIPS" to avoid confusion with nss.cfg.
@@ -2546,14 +2675,11 @@ cjc.mainProgram(args)
 - Enable alignment with FIPS crypto policy by default (-Dcom.redhat.fips=false to disable).
 - Add explicit runtime dependency on NSS for the PKCS11 provider in FIPS mode
 - Move setup of JavaSecuritySystemConfiguratorAccess to Security class so it always occurs (RH1915071)
-- Minor code cleanups on FIPS detection patch and check for SECMOD_GetSystemFIPSEnabled in configure.
-- Remove unneeded Requires on NSS as it will now be dynamically linked and detected by RPM.
 
-* Tue Sep 14 2021 Martin Balao <mbalao@redhat.com> - 1:17.0.0.0.35-1.rolling
+* Mon Sep 06 2021 Martin Balao <mbalao@redhat.com> - 1:17.0.0.0.33-0.2.ea.rolling
 - Support the FIPS mode crypto policy (RH1655466)
 - Use appropriate keystore types when in FIPS mode (RH1818909)
 - Disable TLSv1.3 when the FIPS crypto policy and the NSS-FIPS provider are in use (RH1860986)
-- Detect FIPS using SECMOD_GetSystemFIPSEnabled in the new libsystemconf JDK library.
 
 * Mon Aug 30 2021 Jiri Vanek <jvanek@redhat.com> - 1:17.0.0.0.33-0.1.ea.rolling
 - alternatives creation moved to posttrans
