@@ -275,7 +275,7 @@
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
 %global buildver        8
-%global rpmrelease      2
+%global rpmrelease      3
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 # Using 10 digits may overflow the int used for priority, so we combine the patch and build versions
@@ -748,8 +748,8 @@ exit 0
 %endif
 # https://bugzilla.redhat.com/show_bug.cgi?id=1820172
 # https://docs.fedoraproject.org/en-US/packaging-guidelines/Directory_Replacement/
-%ghost %{_jvmdir}/%{sdkdir -- %{?1}}/conf.rpmmoved
-%ghost %{_jvmdir}/%{sdkdir -- %{?1}}/lib/security.rpmmoved
+%ghost %{_jvmdir}/%{sdkdir %%1}/conf.rpmmoved
+%ghost %{_jvmdir}/%{sdkdir %%1}/lib/security.rpmmoved
 }
 
 %global files_devel() %{expand:
@@ -2248,6 +2248,13 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Tue Apr 5 2022 Jiri Vanek <jvanek@redhat.com> - 1:17.0.1.0.12-3.rolling
+- %%{sdkdir -- %%{?1}} style is no go in epel7, replaced by:
+- %%{sdkdir %%%1} in conf.rpmmoved security.rpmmoved
+- Note, that such error is visible by warning of: error: Too many levels of recursion in macro expansion.
+- Note, that such error do nto fail the build,
+- but as result, an empty package (in this case headless where thsoe files belongs) is created
+
 * Wed Mar 23 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:17.0.2.0.8-2.rolling
 - Restore missing FIPS patches from other branches
 - Fix FIPS issues in native code and with initialisation of java.security.Security
