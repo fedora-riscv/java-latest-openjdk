@@ -287,7 +287,7 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        0
+%global buildver        10
 %global rpmrelease      1
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
@@ -2248,8 +2248,8 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
-* Wed Apr 27 2022 Jiri Vanek <jvanek@redhat.com> - 1:18.0.1.0.0-1.rolling.
-- updated to CPU jdk-18.0.1 sources
+* Fri Apr 29 2022 Jiri Vanek <jvanek@redhat.com> - 1:18.0.1.0.10-1.rolling.
+- updated to CPU jdk-18.0.1+10 sources
 
 * Fri Apr 29 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:18.0.0.0.37-1.rolling
 - Update to RC version of OpenJDK 18
