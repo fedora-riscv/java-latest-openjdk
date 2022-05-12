@@ -266,7 +266,7 @@
 # buildjdkver is usually same as %%{featurever},
 # but in time of bootstrap of next jdk, it is featurever-1,
 # and this it is better to change it here, on single place
-%global buildjdkver 17
+%global buildjdkver 18
 # We don't add any LTS designator for STS packages (Fedora and EPEL).
 # We need to explicitly exclude EPEL as it would have the %%{rhel} macro defined.
 %if 0%{?rhel} && !0%{?epel}
@@ -559,7 +559,7 @@ alternatives \\
   --slave %{_mandir}/man1/jstat.1$ext jstat.1$ext \\
   %{_mandir}/man1/jstat-%{uniquesuffix %%1}.1$ext \\
   --slave %{_mandir}/man1/jwebserver.1$ext jwebserver.1$ext \\
-  %{_mandir}/man1/jwebserver-%{uniquesuffix %%1}.1$ext \\ 
+  %{_mandir}/man1/jwebserver-%{uniquesuffix %%1}.1$ext \\
   --slave %{_mandir}/man1/jstatd.1$ext jstatd.1$ext \\
   %{_mandir}/man1/jstatd-%{uniquesuffix %%1}.1$ext \\
   --slave %{_mandir}/man1/serialver.1$ext serialver.1$ext \\
@@ -2248,7 +2248,11 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
-* Fri Apr 29 2022 Jiri Vanek <jvanek@redhat.com> - 1:18.0.1.0.10-1.rolling.
+* Thu May 12 2022 Petra Alice Mikova <pmikova@redhat.com> - 1.18.0.1.0.10-2.rolling
+- removed accidental whitespace after a slave, causing the devel installation to fail
+- Resolves: rhbz#2084524
+
+* Fri Apr 29 2022 Jiri Vanek <jvanek@redhat.com> - 1:18.0.1.0.10-1.rolling
 - updated to CPU jdk-18.0.1+10 sources
 
 * Fri Apr 29 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:18.0.0.0.37-1.rolling
