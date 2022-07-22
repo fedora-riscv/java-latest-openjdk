@@ -257,7 +257,7 @@
 # New Version-String scheme-style defines
 %global featurever 18
 %global interimver 0
-%global updatever 1
+%global updatever 2
 %global patchver 0
 # If you bump featurever, you must also bump vendor_version_string
 # Used via new version scheme. JDK 17 was
@@ -287,8 +287,8 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        10
-%global rpmrelease      2
+%global buildver        9
+%global rpmrelease      1
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 # Using 10 digits may overflow the int used for priority, so we combine the patch and build versions
@@ -2248,6 +2248,10 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Fri Jul 22 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:18.0.2.0.9-1.rolling
+- Update to jdk-18.0.2 release
+- Update release notes to 18.0.2
+
 * Thu May 12 2022 Petra Alice Mikova <pmikova@redhat.com> - 1.18.0.1.0.10-2.rolling
 - removed accidental whitespace after a slave, causing the devel installation to fail
 - Resolves: rhbz#2084524
