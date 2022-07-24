@@ -310,12 +310,8 @@
 # New Version-String scheme-style defines
 %global featurever 18
 %global interimver 0
-%global updatever 1
-%global patchver 1
-# If you bump featurever, you must also bump vendor_version_string
-# Used via new version scheme. JDK 17 was
-# GA'ed in March 2022 => 22.3
-%global vendor_version_string 22.3
+%global updatever 2
+%global patchver 0
 # buildjdkver is usually same as %%{featurever},
 # but in time of bootstrap of next jdk, it is featurever-1,
 # and this it is better to change it here, on single place
@@ -359,6 +355,7 @@
 %endif
 %endif
 %endif
+%global oj_vendor_version (Red_Hat-%{version}-%{release})
 
 # Define IcedTea version used for SystemTap tapsets and desktop file
 %global icedteaver      6.0.0pre00-c848b93a8598
@@ -370,7 +367,7 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        2
+%global buildver        9
 %global rpmrelease      1
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
@@ -486,6 +483,13 @@
 %global tapsetroot /usr/share/systemtap
 %global tapsetdirttapset %{tapsetroot}/tapset/
 %global tapsetdir %{tapsetdirttapset}/%{stapinstall}
+%endif
+
+# x86 is no longer supported
+%if 0%{?java_arches:1}
+ExclusiveArch:  %{java_arches}
+%else
+ExcludeArch: %{ix86}
 %endif
 
 # not-duplicated scriptlets for normal/debug packages
@@ -760,10 +764,19 @@ PRIORITY=%{priority}
 if [ "%{?1}" == %{debug_suffix} ]; then
   let PRIORITY=PRIORITY-1
 fi
+  for X in %{origin} %{javaver} ; do
+    key=javadocdir_"$X"
+    alternatives --install %{_javadocdir}/java-"$X" $key %{_javadocdir}/%{uniquejavadocdir -- %{?1}}/api $PRIORITY --family %{family_noarch}
+    %{set_if_needed_alternatives $key %{family_noarch}}
+  done
 
-key=javadocdir
-alternatives --install %{_javadocdir}/java $key %{_javadocdir}/%{uniquejavadocdir -- %{?1}}/api $PRIORITY  --family %{family_noarch}
-%{set_if_needed_alternatives  $key %{family_noarch}}
+  key=javadocdir_%{javaver}_%{origin}
+  alternatives --install %{_javadocdir}/java-%{javaver}-%{origin} $key %{_javadocdir}/%{uniquejavadocdir -- %{?1}}/api $PRIORITY --family %{family_noarch}
+  %{set_if_needed_alternatives  $key %{family_noarch}}
+
+  key=javadocdir
+  alternatives --install %{_javadocdir}/java $key %{_javadocdir}/%{uniquejavadocdir -- %{?1}}/api $PRIORITY --family %{family_noarch}
+  %{set_if_needed_alternatives  $key %{family_noarch}}
 exit 0
 }
 
@@ -773,6 +786,9 @@ if [ "x$debug"  == "xtrue" ] ; then
 fi
   post_state=$1 # from postun, https://docs.fedoraproject.org/en-US/packaging-guidelines/Scriptlets/#_syntax
   %{save_and_remove_alternatives  javadocdir  %{_javadocdir}/%{uniquejavadocdir -- %{?1}}/api $post_state %{family_noarch}}
+  %{save_and_remove_alternatives  javadocdir_%{origin} %{_javadocdir}/%{uniquejavadocdir -- %{?1}}/api $post_state %{family_noarch}}
+  %{save_and_remove_alternatives  javadocdir_%{javaver} %{_javadocdir}/%{uniquejavadocdir -- %{?1}}/api $post_state %{family_noarch}}
+  %{save_and_remove_alternatives  javadocdir_%{javaver}_%{origin} %{_javadocdir}/%{uniquejavadocdir -- %{?1}}/api $post_state %{family_noarch}}
 exit 0
 }
 
@@ -784,9 +800,20 @@ PRIORITY=%{priority}
 if [ "%{?1}" == %{debug_suffix} ]; then
   let PRIORITY=PRIORITY-1
 fi
-key=javadoczip
-alternatives --install %{_javadocdir}/java-zip $key %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip $PRIORITY  --family %{family_noarch}
-%{set_if_needed_alternatives  $key %{family_noarch}}
+  for X in %{origin} %{javaver} ; do
+    key=javadoczip_"$X"
+    alternatives --install %{_javadocdir}/java-"$X".zip $key %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip $PRIORITY --family %{family_noarch}
+    %{set_if_needed_alternatives $key %{family_noarch}}
+  done
+
+  key=javadoczip_%{javaver}_%{origin}
+  alternatives --install %{_javadocdir}/java-%{javaver}-%{origin}.zip $key %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip $PRIORITY --family %{family_noarch}
+  %{set_if_needed_alternatives  $key %{family_noarch}}
+
+  # Weird legacy filename for backwards-compatibility
+  key=javadoczip
+  alternatives --install %{_javadocdir}/java-zip $key %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip $PRIORITY  --family %{family_noarch}
+  %{set_if_needed_alternatives  $key %{family_noarch}}
 exit 0
 }
 
@@ -796,6 +823,9 @@ exit 0
   fi
   post_state=$1 # from postun, https://docs.fedoraproject.org/en-US/packaging-guidelines/Scriptlets/#_syntax
   %{save_and_remove_alternatives  javadoczip  %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip $post_state %{family_noarch}}
+  %{save_and_remove_alternatives  javadoczip_%{origin}  %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip $post_state %{family_noarch}}
+  %{save_and_remove_alternatives  javadoczip_%{javaver}  %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip $post_state %{family_noarch}}
+  %{save_and_remove_alternatives  javadoczip_%{javaver}_%{origin}  %{_javadocdir}/%{uniquejavadocdir -- %{?1}}.zip $post_state %{family_noarch}}
 exit 0
 }
 
@@ -1075,6 +1105,9 @@ exit 0
 %if %is_system_jdk
 %if %{is_release_build -- %{?1}}
 %ghost %{_javadocdir}/java
+%ghost %{_javadocdir}/java-%{origin}
+%ghost %{_javadocdir}/java-%{javaver}
+%ghost %{_javadocdir}/java-%{javaver}-%{origin}
 %endif
 %endif
 }
@@ -1085,6 +1118,9 @@ exit 0
 %if %is_system_jdk
 %if %{is_release_build -- %{?1}}
 %ghost %{_javadocdir}/java-zip
+%ghost %{_javadocdir}/java-%{origin}.zip
+%ghost %{_javadocdir}/java-%{javaver}.zip
+%ghost %{_javadocdir}/java-%{javaver}-%{origin}.zip
 %endif
 %endif
 }
@@ -1139,6 +1175,8 @@ OrderWithRequires: copy-jdk-configs
 %endif
 # for printing support
 Requires: cups-libs
+# for system security properties
+Requires: crypto-policies
 # for FIPS PKCS11 provider
 Requires: nss
 # Post requires alternatives to install tool alternatives
@@ -1372,8 +1410,6 @@ Patch1001: fips-18u-%{fipsver}.patch
 # OpenJDK patches in need of upstreaming
 #
 #############################################
-# JDK-8282004: x86_32.ad rules that call SharedRuntime helpers should have CALL effects
-Patch7: jdk8282004-x86_32-missing_call_effects.patch
 
 BuildRequires: autoconf
 BuildRequires: automake
@@ -1402,6 +1438,8 @@ BuildRequires: libXt-devel
 BuildRequires: libXtst-devel
 # Requirement for setting up nss.cfg and nss.fips.cfg
 BuildRequires: nss-devel
+# Requirement for system security property test
+BuildRequires: crypto-policies
 BuildRequires: pkgconfig
 BuildRequires: xorg-x11-proto-devel
 BuildRequires: zip
@@ -1730,6 +1768,8 @@ The %{origin_nice} %{featurever} API documentation compressed in a single archiv
 
 %prep
 
+echo "Preparing %{oj_vendor_version}"
+
 # Using the echo macro breaks rpmdev-bumpspec, as it parses the first line of stdout :-(
 %if 0%{?stapinstall:1}
   echo "CPU: %{_target_cpu}, arch install directory: %{archinstall}, SystemTap install directory: %{stapinstall}"
@@ -1783,7 +1823,6 @@ pushd %{top_level_dir_name}
 %patch2 -p1
 %patch3 -p1
 %patch6 -p1
-%patch7 -p1
 # Add crypto policy and FIPS support
 %patch1001 -p1
 # alt-java
@@ -1927,7 +1966,7 @@ function buildjdk() {
     --with-version-build=%{buildver} \
     --with-version-pre="${EA_DESIGNATOR}" \
     --with-version-opt=%{lts_designator} \
-    --with-vendor-version-string="%{vendor_version_string}" \
+    --with-vendor-version-string="%{oj_vendor_version}" \
     --with-vendor-name="%{oj_vendor}" \
     --with-vendor-url="%{oj_vendor_url}" \
     --with-vendor-bug-url="%{oj_vendor_bug_url}" \
@@ -2318,7 +2357,7 @@ if ! nm $JAVA_HOME/bin/%{alt_java_name} | grep set_speculation ; then true ; els
 
 # Check correct vendor values have been set
 $JAVA_HOME/bin/javac -d . %{SOURCE16}
-$JAVA_HOME/bin/java $(echo $(basename %{SOURCE16})|sed "s|\.java||") "%{oj_vendor}" "%{oj_vendor_url}" "%{oj_vendor_bug_url}"
+$JAVA_HOME/bin/java $(echo $(basename %{SOURCE16})|sed "s|\.java||") "%{oj_vendor}" "%{oj_vendor_url}" "%{oj_vendor_bug_url}" "%{oj_vendor_version}"
 
 %if %{include_staticlibs}
 # Check debug symbols in static libraries (smoke test)
@@ -2587,6 +2626,47 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Fri Jul 22 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:18.0.2.0.9-1.rolling
+- Update to jdk-18.0.2 release
+- Update release notes to 18.0.2
+- Drop JDK-8282004 patch which is now upstreamed under JDK-8282231
+- Exclude x86 where java_arches is undefined, in order to unbreak build
+
+* Fri Jul 22 2022 Jiri Vanek <gnu.andrew@redhat.com> - 1:18.0.1.1.2-8.rolling
+- moved to build only on %%{java_arches}
+-- https://fedoraproject.org/wiki/Changes/Drop_i686_JDKs
+- reverted :
+-- Rebuilt for https://fedoraproject.org/wiki/Fedora_37_Mass_Rebuild (always mess up release)
+-- Try to build on x86 again by creating a husk of a JDK which does not depend on itself
+-- Exclude x86 from builds as the bootstrap JDK is now completely broken and unusable
+-- Replaced binaries and .so files with bash-stubs on i686
+- added ExclusiveArch:  %%{java_arches}
+-- this now excludes i686
+-- this is safely backport-able to older fedoras, as the macro was backported properly (with i686 included)
+- https://bugzilla.redhat.com/show_bug.cgi?id=2104125
+
+* Thu Jul 21 2022 Fedora Release Engineering <releng@fedoraproject.org> - 1:18.0.1.1.2-7.rolling.1
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_37_Mass_Rebuild
+
+* Tue Jul 19 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:18.0.1.1.2-7.rolling
+- Try to build on x86 again by creating a husk of a JDK which does not depend on itself
+
+* Sun Jul 17 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:18.0.1.1.2-6.rolling
+- Exclude x86 from builds as the bootstrap JDK is now completely broken and unusable
+
+* Wed Jul 13 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:18.0.1.1.2-5.rolling
+- Explicitly require crypto-policies during build and runtime for system security properties
+
+* Wed Jul 13 2022 Jiri Vanek <jvanek@redhat.com> - 1:18.0.1.1.2-4.rolling.
+- Replaced binaries and .so files with bash-stubs on i686 in preparation of the removal on that architecture:
+- https://fedoraproject.org/wiki/Changes/Drop_i686_JDKs
+
+* Wed Jul 13 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:18.0.1.1.2-3.rolling
+- Make use of the vendor version string to store our version & release rather than an upstream release date
+
+* Tue Jul 12 2022 FeRD (Frank Dana) <ferdnyc@gmail.com> - 1:18.0.1.1.2-2.rolling
+- Add javaver- and origin-specific javadoc and javadoczip alternatives.
+
 * Mon Jul 11 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:18.0.1.1.2-1.rolling
 - Update to jdk-18.0.1.1 interim release
 - Update release notes to actually reflect OpenJDK 18 and subsequent releases 18.0.1 & 18.0.1.1
