@@ -327,7 +327,7 @@
 # buildjdkver is usually same as %%{featurever},
 # but in time of bootstrap of next jdk, it is featurever-1,
 # and this it is better to change it here, on single place
-%global buildjdkver %{featurever}
+%global buildjdkver 18
 # We don't add any LTS designator for STS packages (Fedora and EPEL).
 # We need to explicitly exclude EPEL as it would have the %%{rhel} macro defined.
 %if 0%{?rhel} && !0%{?epel}
@@ -2681,6 +2681,9 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Tue Sep 20 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:19.0.0.0.36-3.rolling
+- Switch buildjdkver temporarily to 18, as java-19-openjdk is not yet available in the buildroot
+
 * Tue Sep 20 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:19.0.0.0.36-3.rolling
 - Flip the use of system libraries back on by default, as in-tree libraries should only be used on Fedora 37+
 
