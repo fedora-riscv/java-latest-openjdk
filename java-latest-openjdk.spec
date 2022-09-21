@@ -1986,7 +1986,9 @@ function buildjdk() {
       exit 17
     fi
 
-    if [ "x${link_opt}" = "xbundled" ] ; then
+    # This must be set using the global, so that the
+    # static libraries still use a dynamic stdc++lib
+    if [ "x%{link_type}" = "xbundled" ] ; then
         libc_link_opt="static";
     else
         libc_link_opt="dynamic";
@@ -2003,6 +2005,10 @@ function buildjdk() {
     mkdir -p ${outputdir}
     pushd ${outputdir}
 
+    # Note: zlib and freetype use %{link_type}
+    # rather than ${link_opt} as the system versions
+    # are always used in a system_libs build, even
+    # for the static library build
     bash ${top_dir_abs_src_path}/configure \
 %ifarch %{zero_arches}
     --with-jvm-variants=zero \
@@ -2023,8 +2029,8 @@ function buildjdk() {
     --with-native-debug-symbols="%{debug_symbols}" \
     --disable-sysconf-nss \
     --enable-unlimited-crypto \
-    --with-zlib=${link_opt} \
-    --with-freetype=${link_opt} \
+    --with-zlib=%{link_type} \
+    --with-freetype=%{link_type} \
     --with-libjpeg=${link_opt} \
     --with-giflib=${link_opt} \
     --with-libpng=${link_opt} \
@@ -2681,6 +2687,10 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Wed Sep 21 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:19.0.0.0.36-3.rolling
+- The stdc++lib, zlib & freetype options should always be set from the global, so they are not altered for staticlibs builds
+- Remove freetype sources along with zlib sources
+
 * Tue Sep 20 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:19.0.0.0.36-3.rolling
 - Switch buildjdkver temporarily to 18, as java-19-openjdk is not yet available in the buildroot
 
