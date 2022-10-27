@@ -1473,7 +1473,8 @@ BuildRequires: java-latest-openjdk-devel
 BuildRequires: libffi-devel
 %endif
 # 2022e required as of JDK-8295173
-BuildRequires: tzdata-java >= 2022e
+# Temporarily roll back to 2022d as 2022e is still in testing
+BuildRequires: tzdata-java >= 2022d
 # Earlier versions have a bug in tree vectorization on PPC
 BuildRequires: gcc >= 4.8.3-8
 
@@ -2697,6 +2698,9 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Thu Oct 27 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:19.0.1.0.10-2.rolling
+- Temporarily roll build dependency back to tzdata 2022d for F35 as 2022e is still in testing
+
 * Wed Oct 26 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:19.0.1.0.10-2.rolling
 - Update in-tree tzdata to 2022e with JDK-8294357 & JDK-8295173
 - Update CLDR data with Europe/Kyiv (JDK-8293834)
