@@ -24,7 +24,7 @@
 # Build a fresh libjvm.so for use in a copy of the bootstrap JDK
 %bcond_without fresh_libjvm
 # Build with system libraries
-%bcond_without system_libs
+%bcond_with system_libs
 
 # Workaround for stripping of debug symbols from static libraries
 %if %{with staticlibs}
@@ -380,7 +380,7 @@
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
 %global buildver        10
-%global rpmrelease      3
+%global rpmrelease      4
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 # Using 10 digits may overflow the int used for priority, so we combine the patch and build versions
@@ -2698,6 +2698,11 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Wed Dec 07 2022 Jiri Vanek <jvanek@redhat.com> - 1:19.0.0.0.36-4.rolling
+- Flip the use of in-tree libraries back on by default,
+  as in-tree libraries were advertised as being backported once proven ok. That is now
+  In addition, we have it already in live rhel
+
 * Thu Oct 27 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:19.0.1.0.10-2.rolling
 - Temporarily roll build dependency back to tzdata 2022d for F37 as 2022e is still in testing
 
