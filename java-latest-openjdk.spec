@@ -118,7 +118,7 @@
 # Set of architectures for which we build fastdebug builds
 %global fastdebug_arches x86_64 ppc64le aarch64
 # Set of architectures with a Just-In-Time (JIT) compiler
-%global jit_arches      %{arm} %{aarch64} %{ix86} %{power64} s390x sparcv9 sparc64 x86_64
+%global jit_arches      %{arm} %{aarch64} %{ix86} %{power64} s390x sparcv9 sparc64 x86_64 riscv64
 # Set of architectures which use the Zero assembler port (!jit_arches)
 %global zero_arches ppc s390
 # Set of architectures which run a full bootstrap cycle
@@ -128,7 +128,7 @@
 # Set of architectures with a Ahead-Of-Time (AOT) compiler
 %global aot_arches      x86_64 %{aarch64}
 # Set of architectures which support the serviceability agent
-%global sa_arches       %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{power64} %{arm}
+%global sa_arches       %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{power64} %{arm} riscv64
 # Set of architectures which support class data sharing
 # See https://bugzilla.redhat.com/show_bug.cgi?id=513605
 # MetaspaceShared::generate_vtable_methods is not implemented for the PPC JIT
@@ -306,6 +306,11 @@
 %ifarch sparc64
 %global archinstall sparcv9
 %global stapinstall %{_target_cpu}
+%endif
+# for riscv64
+%ifarch riscv64
+%global archinstall riscv64
+%global stapinstall riscv64
 %endif
 # Need to support noarch for srpm build
 %ifarch noarch
@@ -1303,7 +1308,7 @@ Version: %{newjavaver}.%{buildver}
 # This package needs `.rolling` as part of Release so as to not conflict on install with
 # java-X-openjdk. I.e. when latest rolling release is also an LTS release packaged as
 # java-X-openjdk. See: https://bugzilla.redhat.com/show_bug.cgi?id=1647298
-Release: %{?eaprefix}%{rpmrelease}%{?extraver}.rolling%{?dist}
+Release: %{?eaprefix}%{rpmrelease}%{?extraver}.rolling.rv64%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons
 # and this change was brought into RHEL-4. java-1.5.0-ibm packages
 # also included the epoch in their virtual provides. This created a
@@ -1948,7 +1953,7 @@ export NUM_PROC=${NUM_PROC:-1}
 [ ${NUM_PROC} -gt %{?_smp_ncpus_max} ] && export NUM_PROC=%{?_smp_ncpus_max}
 %endif
 
-%ifarch s390x sparc64 alpha %{power64} %{aarch64}
+%ifarch s390x sparc64 alpha %{power64} %{aarch64} riscv64
 export ARCH_DATA_MODEL=64
 %endif
 %ifarch alpha
@@ -2698,6 +2703,9 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Sat Dec 31 2022 Liu Yang <Yang.Liu.sn@gmail.com> - 1:19.0.1.0.10-2.rolling.rv64
+- Add riscv64 support.
+
 * Thu Oct 27 2022 Andrew Hughes <gnu.andrew@redhat.com> - 1:19.0.1.0.10-2.rolling
 - Temporarily roll build dependency back to tzdata 2022d for F37 as 2022e is still in testing
 
