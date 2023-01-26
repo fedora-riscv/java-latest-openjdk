@@ -1303,24 +1303,24 @@ Source16: CheckVendor.java
 Source18: TestTranslations.java
 
 %if %{include_normal_build}
-BuildRequires: %{portable_name}
-BuildRequires: %{portable_name}-devel
+BuildRequires: %{portable_name} >= %{version}
+BuildRequires: %{portable_name}-devel >= %{version}
 %if %{include_staticlibs}
-BuildRequires: %{portable_name}-static-libs
+BuildRequires: %{portable_name}-static-libs >= %{version}
 %endif
 %endif
 %if %{include_fastdebug_build}
-BuildRequires: %{portable_name}-fastdebug
-BuildRequires: %{portable_name}-devel-fastdebug
+BuildRequires: %{portable_name}-fastdebug >= %{version}
+BuildRequires: %{portable_name}-devel-fastdebug >= %{version}
 %if %{include_staticlibs}
-BuildRequires: %{portable_name}-static-libs-fastdebug
+BuildRequires: %{portable_name}-static-libs-fastdebug >= %{version}
 %endif
 %endif
 %if %{include_debug_build}
-BuildRequires: %{portable_name}-slowdebug
-BuildRequires: %{portable_name}-devel-slowdebug
+BuildRequires: %{portable_name}-slowdebug >= %{version}
+BuildRequires: %{portable_name}-devel-slowdebug >= %{version}
 %if %{include_staticlibs}
-BuildRequires: %{portable_name}-static-libs-slowdebug
+BuildRequires: %{portable_name}-static-libs-slowdebug >= %{version}
 %endif
 %endif
 BuildRequires: desktop-file-utils
