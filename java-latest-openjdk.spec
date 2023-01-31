@@ -1333,7 +1333,6 @@ BuildRequires: crypto-policies
 BuildRequires: pkgconfig
 BuildRequires: zip
 BuildRequires: javapackages-filesystem
-#BuildRequires: java-latest-openjdk-devel
 # ?
 BuildRequires: tzdata-java >= 2022g
 
@@ -2030,7 +2029,6 @@ rm $RPM_BUILD_ROOT/%{_jvmdir}/%{sdkdir -- $suffix}/NEWS #is in commondocdir. Ok 
 if [ "x$suffix" = "x" ] ; then
   rm $RPM_BUILD_ROOT/%{_jvmdir}/%{sdkdir -- $suffix}/javadocs.zip #is in subpackages, 1 renamed, 2nd unpacked
 fi
-#rm $RPM_BUILD_ROOT/%{_jvmdir}/%{sdkdir -- $suffix}/lib/libfreetype.so #bug in portables? bug in rpms?
 # end, dual install
 done
 
