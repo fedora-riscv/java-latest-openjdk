@@ -322,7 +322,7 @@
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
 %global buildver        7
-%global rpmrelease      3
+%global rpmrelease      4
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 # Using 10 digits may overflow the int used for priority, so we combine the patch and build versions
@@ -2355,6 +2355,9 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Mon Jan 30 2023 Jiri Vanek <jvanek@redhat.com> - 1:19.0.2.0.7-4.rolling
+- repacked bits are now requested in exact version
+
 * Mon Jan 30 2023 Petra Alice Mikova <pmikova@redhat.com> - 1:19.0.2.0.7-3.rolling
 - return libfreetype.so binary to resolve requires problems
 - remove BuildRequires: java-latest-openjdk
