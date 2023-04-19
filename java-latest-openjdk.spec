@@ -1237,6 +1237,8 @@ Provides: java-%{origin}-src%{?1} = %{epoch}:%{version}-%{release}
 %global __jar_repack 0
 
 %global portable_name %{name}-portable
+# the version must match, but sometmes we need to more precise, so including release
+%global portable_version %{version}-3
 
 Name:    java-latest-%{origin}
 Version: %{newjavaver}.%{buildver}
@@ -1301,25 +1303,27 @@ Source16: CheckVendor.java
 # Ensure translations are available for new timezones
 Source18: TestTranslations.java
 
+BuildRequires: %{portable_name}-sources >= %{portable_version}
+
 %if %{include_normal_build}
-BuildRequires: %{portable_name} >= %{version}
-BuildRequires: %{portable_name}-devel >= %{version}
+BuildRequires: %{portable_name} >= %{portable_version}
+BuildRequires: %{portable_name}-devel >= %{portable_version}
 %if %{include_staticlibs}
-BuildRequires: %{portable_name}-static-libs >= %{version}
+BuildRequires: %{portable_name}-static-libs >= %{portable_version}
 %endif
 %endif
 %if %{include_fastdebug_build}
-BuildRequires: %{portable_name}-fastdebug >= %{version}
-BuildRequires: %{portable_name}-devel-fastdebug >= %{version}
+BuildRequires: %{portable_name}-fastdebug >= %{portable_version}
+BuildRequires: %{portable_name}-devel-fastdebug >= %{portable_version}
 %if %{include_staticlibs}
-BuildRequires: %{portable_name}-static-libs-fastdebug >= %{version}
+BuildRequires: %{portable_name}-static-libs-fastdebug >= %{portable_version}
 %endif
 %endif
 %if %{include_debug_build}
-BuildRequires: %{portable_name}-slowdebug >= %{version}
-BuildRequires: %{portable_name}-devel-slowdebug >= %{version}
+BuildRequires: %{portable_name}-slowdebug >= %{portable_version}
+BuildRequires: %{portable_name}-devel-slowdebug >= %{portable_version}
 %if %{include_staticlibs}
-BuildRequires: %{portable_name}-static-libs-slowdebug >= %{version}
+BuildRequires: %{portable_name}-static-libs-slowdebug >= %{portable_version}
 %endif
 %endif
 BuildRequires: desktop-file-utils
@@ -1340,11 +1344,11 @@ BuildRequires: systemtap-sdt-devel
 %endif
 
 # Version in src/java.desktop/share/native/libfreetype/include/freetype/freetype.h
-Provides: bundled(freetype) = 2.12.0
+Provides: bundled(freetype) = 2.12.1
 # Version in src/java.desktop/share/native/libsplashscreen/giflib/gif_lib.h
 Provides: bundled(giflib) = 5.2.1
 # Version in src/java.desktop/share/native/libharfbuzz/hb-version.h
-Provides: bundled(harfbuzz) = 2.8.0
+Provides: bundled(harfbuzz) = 4.4.1
 # Version in src/java.desktop/share/native/liblcms/lcms2.h
 Provides: bundled(lcms2) = 2.12.0
 # Version in src/java.desktop/share/native/libjavajpeg/jpeglib.h
@@ -1693,25 +1697,26 @@ if [ $prioritylength -ne 8 ] ; then
  exit 14
 fi
 
+tar -xf %{_jvmdir}/%{compatiblename}*portable.sources.noarch.tar.xz 
 %if %{include_normal_build}
-tar -xf %{_jvmdir}/%{compatiblename}*portable.jdk.*tar.xz 
-#tar -xf %{_jvmdir}/%{compatiblename}*portable.jre.*tar.xz 
+tar -xf %{_jvmdir}/%{compatiblename}*portable.jdk.%{_arch}.tar.xz 
+#tar -xf %{_jvmdir}/%{compatiblename}*portable.jre.%{_arch}.tar.xz 
 %if %{include_staticlibs}
-tar -xf %{_jvmdir}/%{compatiblename}*portable.static-libs.*tar.xz 
+tar -xf %{_jvmdir}/%{compatiblename}*portable.static-libs.%{_arch}.tar.xz 
 %endif
 %endif
 %if %{include_fastdebug_build}
-tar -xf %{_jvmdir}/%{compatiblename}*portable.fastdebug.jdk.*tar.xz 
-#tar -xf %{_jvmdir}/%{compatiblename}*portable.fastdebug.jre.*tar.xz 
+tar -xf %{_jvmdir}/%{compatiblename}*portable.fastdebug.jdk.%{_arch}.tar.xz 
+#tar -xf %{_jvmdir}/%{compatiblename}*portable.fastdebug.jre.%{_arch}.tar.xz 
 %if %{include_staticlibs}
-tar -xf %{_jvmdir}/%{compatiblename}*portable.fastdebug.static-libs.*tar.xz 
+tar -xf %{_jvmdir}/%{compatiblename}*portable.fastdebug.static-libs.%{_arch}.tar.xz 
 %endif
 %endif
 %if %{include_debug_build}
-tar -xf %{_jvmdir}/%{compatiblename}*portable.slowdebug.jdk.*tar.xz 
-#tar -xf %{_jvmdir}/%{compatiblename}*portable.slowdebug.jre.*tar.xz 
+tar -xf %{_jvmdir}/%{compatiblename}*portable.slowdebug.jdk.%{_arch}.tar.xz 
+#tar -xf %{_jvmdir}/%{compatiblename}*portable.slowdebug.jre.%{_arch}.tar.xz 
 %if %{include_staticlibs}
-tar -xf %{_jvmdir}/%{compatiblename}*portable.slowdebug.static-libs.*tar.xz 
+tar -xf %{_jvmdir}/%{compatiblename}*portable.slowdebug.static-libs.%{_arch}.tar.xz 
 %endif
 %endif
 
