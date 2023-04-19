@@ -851,6 +851,8 @@ exit 0
 %endif
 %endif
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/libsctp.so
+%{_jvmdir}/%{sdkdir -- %{?1}}/lib/libsystemconf.so
+
 %ifarch %{svml_arches}
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/libjsvml.so
 %endif
@@ -2365,6 +2367,7 @@ cjc.mainProgram(args)
 - using icons from source package
 - providing full sources via src package
 - requiring exact version.reelase of portables
+- returned libsystemconf.so
 
 * Mon Apr 03 2023 Jiri Vanek <jvanek@redhat.com> - 1:20.0.0.0.36-1.rolling
 - bumed to jdk20
