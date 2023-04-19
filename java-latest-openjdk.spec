@@ -322,7 +322,7 @@
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
 %global buildver        36
-%global rpmrelease      1
+%global rpmrelease      3
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 # Using 10 digits may overflow the int used for priority, so we combine the patch and build versions
@@ -1042,6 +1042,7 @@ exit 0
 %define files_src() %{expand:
 %license %{_jvmdir}/%{sdkdir -- %{?1}}/legal
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/src.zip
+%{_jvmdir}/%{sdkdir -- %{?1}}/full_sources
 }
 
 %define files_static_libs() %{expand:
@@ -1924,6 +1925,7 @@ for suffix in %{build_loop} ; do
   top_dir_abs_staticlibs_build_path=`ls -d $top_dir_abs_main_build_path/lib/static/*/glibc/`
 %endif
   jdk_image=${top_dir_abs_main_build_path}
+  src_image=`echo ${top_dir_abs_main_build_path} | sed "s/portable.*.%{_arch}/portable.sources.noarch/"`
 
 # Install the jdk
 mkdir -p $RPM_BUILD_ROOT%{_jvmdir}
@@ -1931,12 +1933,13 @@ mkdir -p $RPM_BUILD_ROOT%{_jvmdir}
 # Install icons
 for s in 16 24 32 48 ; do
   install -D -p -m 644 \
-    ${jdk_image}/ext_stubs/java.desktop/unix/classes/sun/awt/X11/java-icon${s}.png \
+     ${src_image}/openjdk/src/java.desktop/unix/classes/sun/awt/X11/java-icon${s}.png \
      $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/${s}x${s}/apps/java-%{javaver}-%{origin}.png
 done
-rm -rvf ${jdk_image}/ext_stubs/ #currently jsut the icons
+
 
 cp -a ${jdk_image} $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}
+cp -a ${src_image} $RPM_BUILD_ROOT%{_jvmdir}/%{sdkdir -- $suffix}/full_sources
 
 pushd ${jdk_image}
 
@@ -2358,6 +2361,11 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Wed Apr 19 2023 Jiri Vanek <jvanek@redhat.com> - 1:20.0.0.0.36-3.rolling
+- using icons from source package
+- providing full sources via src package
+- requiring exact version.reelase of portables
+
 * Mon Apr 03 2023 Jiri Vanek <jvanek@redhat.com> - 1:20.0.0.0.36-1.rolling
 - bumed to jdk20
 - removed no loger existing libsystemconf.so
