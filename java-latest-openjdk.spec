@@ -1699,26 +1699,26 @@ if [ $prioritylength -ne 8 ] ; then
  exit 14
 fi
 
-tar -xf %{_jvmdir}/%{compatiblename}*portable.sources.noarch.tar.xz 
+tar -xf %{_jvmdir}/%{compatiblename}*portable.sources.noarch.tar.xz
 %if %{include_normal_build}
-tar -xf %{_jvmdir}/%{compatiblename}*portable.jdk.%{_arch}.tar.xz 
-#tar -xf %{_jvmdir}/%{compatiblename}*portable.jre.%{_arch}.tar.xz 
+tar -xf %{_jvmdir}/%{compatiblename}*portable.jdk.%{_arch}.tar.xz
+#tar -xf %{_jvmdir}/%{compatiblename}*portable.jre.%{_arch}.tar.xz
 %if %{include_staticlibs}
-tar -xf %{_jvmdir}/%{compatiblename}*portable.static-libs.%{_arch}.tar.xz 
+tar -xf %{_jvmdir}/%{compatiblename}*portable.static-libs.%{_arch}.tar.xz
 %endif
 %endif
 %if %{include_fastdebug_build}
-tar -xf %{_jvmdir}/%{compatiblename}*portable.fastdebug.jdk.%{_arch}.tar.xz 
-#tar -xf %{_jvmdir}/%{compatiblename}*portable.fastdebug.jre.%{_arch}.tar.xz 
+tar -xf %{_jvmdir}/%{compatiblename}*portable.fastdebug.jdk.%{_arch}.tar.xz
+#tar -xf %{_jvmdir}/%{compatiblename}*portable.fastdebug.jre.%{_arch}.tar.xz
 %if %{include_staticlibs}
-tar -xf %{_jvmdir}/%{compatiblename}*portable.fastdebug.static-libs.%{_arch}.tar.xz 
+tar -xf %{_jvmdir}/%{compatiblename}*portable.fastdebug.static-libs.%{_arch}.tar.xz
 %endif
 %endif
 %if %{include_debug_build}
-tar -xf %{_jvmdir}/%{compatiblename}*portable.slowdebug.jdk.%{_arch}.tar.xz 
-#tar -xf %{_jvmdir}/%{compatiblename}*portable.slowdebug.jre.%{_arch}.tar.xz 
+tar -xf %{_jvmdir}/%{compatiblename}*portable.slowdebug.jdk.%{_arch}.tar.xz
+#tar -xf %{_jvmdir}/%{compatiblename}*portable.slowdebug.jre.%{_arch}.tar.xz
 %if %{include_staticlibs}
-tar -xf %{_jvmdir}/%{compatiblename}*portable.slowdebug.static-libs.%{_arch}.tar.xz 
+tar -xf %{_jvmdir}/%{compatiblename}*portable.slowdebug.static-libs.%{_arch}.tar.xz
 %endif
 %endif
 
