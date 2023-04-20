@@ -1332,6 +1332,7 @@ BuildRequires: desktop-file-utils
 # elfutils only are OK for build without AOT
 BuildRequires: elfutils-devel
 BuildRequires: gdb
+# Requirement for setting up nss.cfg and nss.fips.cfg
 BuildRequires: nss-devel
 # Requirement for system security property test
 BuildRequires: crypto-policies
