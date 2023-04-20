@@ -30,7 +30,7 @@
 %global include_staticlibs 0
 %endif
 
-#palceholder - used in regexes, otherwise for no use in portables
+#placeholder - used in regexes, otherwise for no use in portables
 %global freetype_lib |libfreetype[.]so.*
 
 # The -g flag says to use strip -g instead of full strip on DSOs or EXEs.
