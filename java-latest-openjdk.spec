@@ -852,7 +852,6 @@ exit 0
 %endif
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/libsctp.so
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/libsystemconf.so
-
 %ifarch %{svml_arches}
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/libjsvml.so
 %endif
