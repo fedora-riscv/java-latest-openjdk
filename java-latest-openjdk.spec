@@ -104,7 +104,7 @@
 # Set of architectures for which we build fastdebug builds
 %global fastdebug_arches x86_64 ppc64le aarch64
 # Set of architectures with a Just-In-Time (JIT) compiler
-%global jit_arches      %{arm} %{aarch64} %{ix86} %{power64} s390x sparcv9 sparc64 x86_64
+%global jit_arches      %{arm} %{aarch64} %{ix86} %{power64} s390x sparcv9 sparc64 x86_64 riscv64
 # Set of architectures which use the Zero assembler port (!jit_arches)
 %global zero_arches ppc s390
 # Set of architectures which support SystemTap tapsets
@@ -112,7 +112,7 @@
 # Set of architectures with a Ahead-Of-Time (AOT) compiler
 %global aot_arches      x86_64 %{aarch64}
 # Set of architectures which support the serviceability agent
-%global sa_arches       %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{power64} %{arm}
+%global sa_arches       %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{power64} %{arm} riscv64
 # Set of architectures which support class data sharing
 # See https://bugzilla.redhat.com/show_bug.cgi?id=513605
 # MetaspaceShared::generate_vtable_methods is not implemented for the PPC JIT
@@ -263,6 +263,11 @@
 %ifarch sparc64
 %global archinstall sparcv9
 %global stapinstall %{_target_cpu}
+%endif
+# for riscv64
+%ifarch riscv64
+%global archinstall riscv64
+%global stapinstall riscv64
 %endif
 # Need to support noarch for srpm build
 %ifarch noarch
@@ -2354,6 +2359,9 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Wed Apr 26 2023 Liu Yang <Yang.Liu.sn@gmail.com> - 1:19.0.2.0.7-5.rolling.rv64
+- Add riscv64 support
+
 * Mon Jan 30 2023 Jiri Vanek <jvanek@redhat.com> - 1:19.0.2.0.7-5.rolling
 - Using icons whcih are now part of the portble tarball
 
