@@ -279,7 +279,7 @@
 # New Version-String scheme-style defines
 %global featurever 20
 %global interimver 0
-%global updatever 0
+%global updatever 1
 %global patchver 0
 
 # We don't add any LTS designator for STS packages (Fedora and EPEL).
@@ -321,7 +321,7 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        36
+%global buildver        9
 %global rpmrelease      3
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
@@ -1240,7 +1240,7 @@ Provides: java-%{origin}-src%{?1} = %{epoch}:%{version}-%{release}
 
 %global portable_name %{name}-portable
 # the version must match, but sometmes we need to more precise, so including release
-%global portable_version %{version}-3
+%global portable_version %{version}-1
 
 Name:    java-latest-%{origin}
 Version: %{newjavaver}.%{buildver}
@@ -2363,6 +2363,9 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+* Fri Apr 28 2023 Jiri Vanek <jvanek@redhat.com> - 1:20.0.1.0.9-1.rolling
+- updated to 20.0.1.0.9 underlying portables
+
 * Wed Apr 19 2023 Jiri Vanek <jvanek@redhat.com> - 1:20.0.0.0.36-3.rolling
 - using icons from source package
 - providing full sources via src package
