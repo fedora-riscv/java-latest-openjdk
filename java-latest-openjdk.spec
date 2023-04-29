@@ -1328,6 +1328,7 @@ BuildRequires: %{portable_name}-devel-slowdebug >= %{portable_version}
 BuildRequires: %{portable_name}-static-libs-slowdebug >= %{portable_version}
 %endif
 %endif
+
 BuildRequires: desktop-file-utils
 # elfutils only are OK for build without AOT
 BuildRequires: elfutils-devel
@@ -1338,6 +1339,7 @@ BuildRequires: nss-devel
 BuildRequires: crypto-policies
 BuildRequires: pkgconfig
 BuildRequires: zip
+BuildRequires: unzip
 BuildRequires: javapackages-filesystem
 # ?
 BuildRequires: tzdata-java >= 2022g
@@ -1472,7 +1474,7 @@ Group:   Development/Tools
 %{java_devel_rpo -- %{fastdebug_suffix_unquoted}}
 
 %description devel-fastdebug
-The %{origin_nice} %{featurever} development tools              .
+The %{origin_nice} %{featurever} development tools.
 %{fastdebug_warning}
 %endif
 
@@ -1805,7 +1807,7 @@ function installjdk() {
         ln -sv /etc/pki/java/cacerts ${imagepath}/lib/security
 
         # add alt-java man page
-		#  alt-java man and bianry are here from portables. Or not?
+	#  alt-java man and bianry are here from portables. Or not?
     fi
 }
 
