@@ -113,10 +113,7 @@
 %global aot_arches      x86_64 %{aarch64}
 # Set of architectures which support the serviceability agent
 %global sa_arches       %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{power64} %{arm}
-# Set of architectures which support class data sharing
-# See https://bugzilla.redhat.com/show_bug.cgi?id=513605
-# MetaspaceShared::generate_vtable_methods is not implemented for the PPC JIT
-%global share_arches    %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{arm} s390x
+%global share_arches    %{ix86} %{power64} x86_64 sparcv9 sparc64 %{aarch64} %{arm} s390x
 # Set of architectures for which we build the Shenandoah garbage collector
 %global shenandoah_arches x86_64 %{aarch64}
 # Set of architectures for which we build the Z garbage collector
@@ -801,7 +798,7 @@ exit 0
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/keytool
 %{_jvmdir}/%{sdkdir -- %{?1}}/bin/rmiregistry
 %dir %{_jvmdir}/%{sdkdir -- %{?1}}/lib
-%ifarch %{jit_arches}
+%ifarch %{share_arches}
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/classlist
 %endif
 %{_jvmdir}/%{sdkdir -- %{?1}}/lib/jexec
