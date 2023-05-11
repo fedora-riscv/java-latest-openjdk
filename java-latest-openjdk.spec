@@ -113,7 +113,9 @@
 %global aot_arches      x86_64 %{aarch64}
 # Set of architectures which support the serviceability agent
 %global sa_arches       %{ix86} x86_64 sparcv9 sparc64 %{aarch64} %{power64} %{arm}
-%global share_arches    %{ix86} %{power64} x86_64 sparcv9 sparc64 %{aarch64} %{arm} s390x
+# As of JDK-8005165 in OpenJDK 10, class sharing is not arch-specific
+# However, it does segfault on the Zero assembler port, so currently JIT only
+%global share_arches    %{jit_arches}
 # Set of architectures for which we build the Shenandoah garbage collector
 %global shenandoah_arches x86_64 %{aarch64}
 # Set of architectures for which we build the Z garbage collector
@@ -319,7 +321,7 @@
 %global top_level_dir_name   %{origin}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
 %global buildver        9
-%global rpmrelease      7
+%global rpmrelease      8
 # Priority must be 8 digits in total; up to openjdk 1.8, we were using 18..... so when we moved to 11, we had to add another digit
 %if %is_system_jdk
 # Using 10 digits may overflow the int used for priority, so we combine the patch and build versions
@@ -2385,6 +2387,10 @@ cjc.mainProgram(args)
 %endif
 
 %changelog
+  %changelog
+* Thu May 11 2023 Andrew Hughes <gnu.andrew@redhat.com> - 1:20.0.1.0.9-8.rolling
+- Following JDK-8005165, class data sharing can be enabled on all JIT architectures
+
 * Wed May 10 2023 Severin Gehwolf <sgehwolf@redhat.com> - 1:20.0.1.0.9-6.rolling
 - Fix packaging of CDS archives
 
